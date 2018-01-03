@@ -101,14 +101,6 @@ class IBM_MW_Installer():
 			supports_check_mode = True
 		)
 
-	def check_existence(self, dest):
-		"""Function to see if IBM MW product exists"""
-		if os.path.exists(dest):
-			self.module.exit_json(
-				msg="IBM WAS ND Is Installed",
-				changed=False
-			)
-
 	def main(self):
 		"""Function that will be doing all the work for the new module"""
 		state = self.module.params['state']
@@ -120,7 +112,7 @@ class IBM_MW_Installer():
 		logdir = self.module.params['logdir']
 
 
-		if state == 'present' and response_file == True and os.path.exists(dest+"bin/versionInfo.sh") == False:
+		if state == 'present' and response_file == True and os.path.exists("/opt/WebSphere/AppServer8.5/bin/versionInfo.sh") == False:
 			imcl = '/opt/WebSphere/InstallationManager/eclipse/tools/imcl'
 			child = subprocess.Popen(
 				[imcl +
