@@ -62,13 +62,6 @@ options:
 			- Hostname of server that Dmgr is running on
 			- Required when wanting to federate additonal profile into Dmgr cell
 
-	startManager:
-
-		description:
-			- Starts IBM Dmgr Process. 
-			- Boolean option:
-			- Specify True to start
-			- False to skip
 
 author: Tommy Davison (pwtwd35)
 '''
@@ -106,7 +99,7 @@ EXAMPLES='''
         profilePath: /opt/WebSphere/AppServer/profiles/Dmgr01
         adminUser: wsadmin
         adminPasswd: examplepassword123
-        startManager: True
+  
 
 -------------------------
 ---
@@ -160,7 +153,7 @@ class PMT_Tool():
 		dmgrHost = self.module.params['dmgrHost']
 		was_root = self.module.params['was_root']
 
-		if state == 'present' and profileName == 'Dmgr01' and os.path.exists(profilePath+"/properties/version/profile.version") == False and startManager:
+		if state == 'present' and profileName == 'Dmgr01' and os.path.exists(profilePath+"/properties/version/profile.version") == False:
 			child = subprocess.Popen(
 				[was_root + "/bin/manageprofiles.sh "+
 				"-create "
