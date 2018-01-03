@@ -145,7 +145,6 @@ class PMT_Tool():
 				profilePath = dict(required=False),
 				dmgrHost = dict(required=False),
 				was_root = dict(required=False),
-				startManager = dict(type='bool', required=False)
 			),
 			supports_check_mode = True
 		)
@@ -160,7 +159,6 @@ class PMT_Tool():
 		profilePath = self.module.params['profilePath']
 		dmgrHost = self.module.params['dmgrHost']
 		was_root = self.module.params['was_root']
-		startManager = self.module.params['startManager']
 
 		if state == 'present' and profileName == 'Dmgr01' and os.path.exists(profilePath+"/properties/version/profile.version") == False and startManager:
 			child = subprocess.Popen(
@@ -192,55 +190,6 @@ class PMT_Tool():
 				changed=True,
 				stdout=stdout_value,
 				stderr=stderr_value
-			)
-			dmgr_start = profilePath + "/bin/startManager.sh"
-			child = subprocess.Popen(
-				[dmgr_start],
-				shell=True,
-				stdout=subprocess.PIPE,
-				stderr=subprocess.PIPE
-			)
-			stdout_value, stderr_value = child.communicate()
-
-			if child.returncode != 0:
-				self.module.fail_json(
-					msg="Failed to start Dmgr Process.",
-					stderr=stderr_value,
-					stdout=stdout_value
-				)
-			self.module.exit_json(
-				msg="Started Dmgr Process.",
-				changed=True,
-				stdout=stdout_value,
-				stderr=stderr_value
-			)
-
-		if profileName == 'Dmgr01' and startManager and os.path.exists(profilePath+"/logs/dmgr/dmgr.pid") == False:
-			dmgr_start = profilePath + "/bin/startManager.sh"
-			child = subprocess.Popen(
-				[dmgr_start],
-				shell=True,
-				stdout=subprocess.PIPE,
-				stderr=subprocess.PIPE
-			)
-			stdout_value, stderr_value = child.communicate()
-
-			if child.returncode != 0:
-				self.module.fail_json(
-					msg="Failed to start DMGR Process",
-					stderr=stderr_value,
-					stdout=stdout_value
-				)
-			self.module.exit_json(
-				msg="Dmgr is open for e-buisnuess",
-				changed=True,
-				stdout=stdout_value,
-				stderr=stderr_value
-			)
-		else:
-			self.module.exit_json(
-				msg="DMGR is already running",
-				changed=False,
 			)
 
 		if state == 'present' and profileName == 'AppSrv01' and os.path.exists(profilePath+"/properties/version/profile.version") == False:
