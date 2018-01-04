@@ -155,11 +155,11 @@ class PMT_Tool():
 
 		if state == 'present' and profileName == 'Dmgr01' and os.path.exists(profilePath+"/properties/version/profile.version") == False:
 			child = subprocess.Popen(
-				[was_root + "/bin/manageprofiles.sh "+
+				[was_root + "/bin/manageprofiles.sh " +
 				"-create "
 				"-templatePath " + templatePath + " " +
 				"-adminUserName " + adminUser + " " +
-				"-adminPassword " + adminPasswd + " "+
+				"-adminPassword " + adminPasswd + " " +
 				"-enableAdminSecurity true "
 				"-profilePath " + profilePath + " " +
 				"-personalCertValidityPeriod 15 "
