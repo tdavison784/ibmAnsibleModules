@@ -1,6 +1,10 @@
 #!/usr/bin/python
+
 import os
-import subprocess
+import subprocess as sp
+from ansible.module_utils.basic import AnsibleModule
+
+
 ANSIBLE_METADATA = {
     'metadata_version': '1.1',
     'status': ['preview'],
@@ -19,19 +23,18 @@ description:
 	- Control IHS service state
 
 options:
-	state:
+  state:
+    description:
+      - started, stopped, restarted
+      - will start, stop, or restart adminctl, or apachetcl service
 
-		description:
-			- started, stopped, restarted
-			- will start, stop, or restart adminctl, or apachetcl service
-	service:
+  service:
+    description:
+      - adminctl, apachectl
+      - adminctl is needed to communicate with WAS Dmgr cell
+      - apachectl controls httpd process
 
-		description:
-			- adminctl, apachectl
-			- adminctl is needed to communicate with WAS Dmgr cell
-			- apachectl controls httpd process
-
-author: Tommy Davison (pwtwd35)
+author: Tommy Davison <tommy.davison@state.mn.us>
 '''
 
 EXAMPLES='''
@@ -47,139 +50,156 @@ EXAMPLES='''
     service: apachectl
 '''
 
-class IHS():
+def ihs_run():
 
-	Module = None
+    module_args = dict(
+        state=dict(type='str', required=True, choices=['restart', 'start', 'stop']),
+        service=dict(type='str', required=True, choices=['adminctl', 'apachectl'])
+    )
 
-	def __init__(self):
-		"""Function to init all needed arguments"""
-		self.module = AnsibleModule(
-			argument_spec = dict(
-				state = dict(required=True, choices=['started', 'stopped', 'restarted']),
-				service = dict(required=True, choices=['adminctl', 'apachectl'])
-			)
-		)
+    module = AnsibleModule(
+        argument_spec=module_args
+    )
 
-	def  main(self):
-		"""Function that will be preforming all the work."""
-		state = self.module.params['state']
-		service = self.module.params['service']
+    state = module.params['state']
+    service = module.params['service']
 
-		http_root = '/opt/WebSphere/HTTPServer'
+    #Set static vars
+    http_root='/opt/WebSphere/HTTPServer'
 
-		if state == 'started' and service == 'adminctl' and os.path.exists(http_root+"/logs/admin.pid") == False:
-			child = subprocess.Popen(
-				[http_root + "/bin/" +
-				service + " " +
-				"start "],
-				shell=True,
-				stdout=subprocess.PIPE,
-				stderr=subprocess.PIPE
-			)
-			stdout_value, stderr_value = child.communicate()
+    if state == 'start':
+        if service == 'adminctl' and os.path.exists(http_root+'/logs/admin.pid'):
+            module.exit_json(
+                msg='adminctl is already running',
+                changed=False
+            )
+        elif service == 'adminctl' and os.path.exists(http_root+'/logs/admin.pid') == False:
+            child = sp.Popen(
+                [
+                    http_root+'/bin/adminctl start'
+                ],
+                shell=True,
+                stdout = sp.PIPE,
+                stderr = sp.PIPE
+            )
+            stdout_value, stderr_value = child.communicate()
+            if child.returncode != 0:
+                module.fail_json(
+                    msg='Failed to start adminctl process',
+                    changed=False,
+                    stderr = stderr_value,
+                    stdout = stdout_value
+                )
+            module.exit_json(
+                msg='Started adminctl process',
+                changed=True
+            )
+        elif service == 'apachectl' and os.path.exists(http_root+'/logs/httpd.pid'):
+            module.exit_json(
+                msg='httpd process is already running',
+                changed=False
+            )
+        elif service == 'apachectl' and os.path.exists(http_root+'/logs/httpd.pid') == False:
+            child = sp.Popen(
+                [
+                    http_root+'/bin/apachectl start'
+                ],
+                shell=True,
+                stdout = sp.PIPE,
+                stderr = sp.PIPE
+            )
+            stdout_value, stderr_value = child.communicate()
+            if child.returncode != 0:
+                module.fail_json(
+                    msg='Failed to start apachectl process',
+                    changed=False,
+                    stderr = stderr_value,
+                    stdout = stdout_value
+                )
+            module.exit_json(
+                msg='Started apachectl process',
+                changed=True
+            )
 
-			if child.returncode != 0:
-				self.module.fail_json(
-					msg="Failed to start adminctl service",
-					changed=False,
-					stderr=stderr_value,
-					stdout=stdout_value
-				)
-			self.module.exit_json(
-				msg="Started adminctl service",
-				changed=True,
-				stdout=stdout_value,
-				stderr=stderr_value
-			)
+    elif state == 'restart':
+        child = sp.Popen(
+            [
+                http_root+'/bin/'+service+ ' restart'
+            ],
+            shell=True,
+            stdout = sp.PIPE,
+            stderr = sp.PIPE
+        )
+        stdout_value, stderr_value = child.communicate()
+        if child.returncode != 0:
+            module.fail_json(
+                msg='Failed to restart ' + service + ' process',
+                changed=False,
+                stderr = stderr_value,
+                stdout = stdout_value
+            )
+        module.exit_json(
+            msg='Restarted ' + service + ' process',
+            changed=True
+        )
 
-		if state == 'started' and service == 'apachectl'and os.path.exists(http_root+"/logs/httpd.pid") == False:
-			child = subprocess.Popen(
-				[http_root + "/bin/" +
-				service + " " +
-				"start "],
-				shell=True,
-				stdout=subprocess.PIPE,
-				stderr=subprocess.PIPE
-			)
-			stdout_value, stderr_value = child.communicate()
-
-			if child.returncode != 0:
-				self.module.fail_json(
-					msg="Failed to start HTTP service",
-					changed=False,
-					stderr=stderr_value,
-					stdout=stdout_value
-				)
-			self.module.exit_json(
-				msg="Successfully started HTTP service",
-				changed=True,
-				stdout=stdout_value,
-				stderr=stderr_value
-			)
-
-		if state == 'restarted':
-			child = subprocess.Popen(
-				[http_root + "/bin/" +
-				service + " " +
-				"stop "],
-				shell=True,
-			),
-			child = subprocess.Popen(
-				[http_root + "/bin/" +
-				service + " " +
-				"start "],
-				shell=True,
-				stdout=subprocess.PIPE,
-				stderr=subprocess.PIPE
-			)
-			stdout_value, stderr_value = child.communicate()
-
-			if child.returncode !=0:
-				self.module.fail_json(
-					msg="Failed to restart " + service,
-					changed=False,
-					stderr=stderr_value,
-					stdout=stdout_value
-				)
-			self.module.exit_json(
-				msg="Successfully restarted " + service,
-				changed=True,
-				stdout=stdout_value,
-				stderr=stderr_value
-			)
-
-		if state == 'stopped':
-			child = subprocess.Popen(
-				[http_root + "/bin/" +
-				service + " " +
-				"stop "],
-				shell=True,
-				stdout=subprocess.PIPE,
-				stderr=subprocess.PIPE
-			)
-			stdout_value, stderr_value = child.communicate()
-
-			if child.returncode != 0:
-				self.module.fail_json(
-					msg="Failed to stop " + service,
-					changed=False,
-					stderr=stderr_value,
-					stdout=stdout_value
-				)
-			self.module.exit_json(
-				msg="Stopped " + service,
-				changed=True,
-				stdout=stdout_value,
-				stderr=stderr_value
-			)
-                else:
-                        self.module.exit_json(
-                                msg=service + " is already started",
-                                changed=False
-                        )
+    elif state == 'stop':
+        if service == 'adminctl' and os.path.exists(http_root+'/logs/admin.pid') == False:
+            module.exit_json(
+                msg='adminctl process is not running',
+                changed=False
+            )
+        elif service == 'adminctl' and os.path.exists(http_root+'/logs/admin.pid'):
+            child = sp.Popen(
+                [
+                    http_root+'/bin/adminctl stop'
+                ],
+                shell=True,
+                stdout = sp.PIPE,
+                stderr = sp.PIPE
+            )
+            stdout_value, stderr_value = child.communicate()
+            if child.returncode != 0:
+                module.fail_json(
+                    msg='Failed to stop adminctl process',
+                    changed=False,
+                    stderr = stderr_value,
+                    stdout = stdout_value
+                )
+            module.exit_json(
+                msg='Stopped adminctl process',
+                changed=True
+            )
+        elif service == 'apachectl' and os.path.exists(http_root+'/logs/httpd.pid') == False:
+            module.exit_json(
+                msg='apachectl process is not running',
+                changed=False
+            )
+        elif service == 'apachectl' and os.path.exists(http_root+'/logs/httpd.pid'):
+            child = sp.Popen(
+                [
+                    http_root+'/bin/apachectl stop'
+                ],
+                shell=True,
+                stdout = sp.PIPE,
+                stderr = sp.PIPE
+            )
+            stdout_value, stderr_value = child.communicate()
+            if child.returncode != 0:
+                module.fail_json(
+                    msg='Failed to stop apachectl process',
+                    changed=False,
+                    stderr = stderr_value,
+                    stdout = stdout_value
+                )
+            module.exit_json(
+                msg='Stopped apachectl process',
+                changed=True
+            )
 
 
-from ansible.module_utils.basic import *
-if __name__ == "__main__":
-	run = IHS()
-	run.main()
+def main():
+    ihs_run()
+
+if __name__ == '__main__':
+    main()

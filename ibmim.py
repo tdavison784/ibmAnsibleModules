@@ -68,7 +68,7 @@ EXAMPLES='''
       name: Install IBM IM using non default path
       ibmim:
         src: /was855/IM188/
-        dest: /opt/WebSphere85/InstallationManager/
+        dest: /opt/WebSphere/InstallationManager/
 -------------------------
 ''' 
 
@@ -136,7 +136,7 @@ class IBM_IM_Installer():
 			)
 
 		if state == 'absent':
-			uninstall_dir = "/home/wsadmin/var/ibm/InstallationManager/uninstall/uninstallc"
+			uninstall_dir = "/opt/WebSphere/InstallationManager/uninstall/uninstallc"
                         child = subprocess.Popen(
                                 [uninstall_dir],
                                 shell=True,
