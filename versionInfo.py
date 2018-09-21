@@ -8,7 +8,7 @@ def get_versionInfo():
     module = AnsibleModule(
         argument_spec=dict(
             was_root=dict(type='str', required=True),
-            product=dict(type='str', required=True, choices=['IHS', 'WAS'])
+            product=dict(type='str', required=True, choices=['IHS', 'WAS', 'BPM'])
         )
     )
 
