@@ -13,20 +13,21 @@ ANSIBLE_METADATA = {
     'supported_by': 'community'
 }
 
+TODO='''
+Need to implement uninstallAll flag to remove all packages
+'''
+
 DOCUMENTATION='''
 ---
 
 module: imcl.py
-
 short_description: Module to install, update, and uninstall any WAS packages
-
-version_added: 2.0
-
 description:
     - Module to install, update, and uninstall any packages for WAS
     - Can be done via response file, or package, and install dir specifications
     - If no dest is givin, a default WAS_HOME of: /opt/WebSphere/AppServer8.5.5 is given
-
+version_added: "2.0"
+author: Tommy Davison <tommy.davison@state.mn.us>
 options:
     dest:
       description:
@@ -61,7 +62,6 @@ options:
         - Only requried when response_loc is not specified
         - Choices: absent, present, update
 
-author: Tommy Davison <tommy.davison@state.mn.us>
 '''
 
 EXAMPLE='''
@@ -96,7 +96,8 @@ def imcl_run():
         state=dict(type='str', required=False, choices=['absent', 'present','update']),
         src=dict(required=False),
         dest=dict(required=False),
-        package=dict(required=False)
+        package=dict(required=False),
+        imcl_path=dict(type='str', required=True)
     )
     
 
@@ -110,11 +111,10 @@ def imcl_run():
     src = module.params['src']
     dest = module.params['dest']
     package = module.params['package']
+    imcl_path = module.params['imcl_path']
 
-    # Set static vars
-    imcl_path = '/opt/WebSphere/InstallationManager/eclipse/tools/imcl' 
     date = datetime.datetime.now()
-    date_format = date.strftime("%Y%M%D-%H%M")
+    date_format = date.strftime("%Y%M%D%H%M")
 
     if response_file == True:
         rsp_file = ET.parse(response_loc)
@@ -178,7 +178,7 @@ def imcl_run():
                 stdout = stdout_value
             )
         module.exit_json(
-            msg='Succesfully installed WAS ND.',
+            msg='Succesfully installed package ' + package,
             changed=True
         )
     elif state == 'present' and os.path.exists(dest+'/bin/versionInfo.sh'):
