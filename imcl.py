@@ -188,44 +188,6 @@ def imcl_run():
             msg='WAS ND is already installed',
             changed=False
         )
-    elif state == 'present' and url:
-       child = sp.Popen(
-            [
-                imcl_path + ' listInstalledPackages'
-            ],
-            shell=True,
-            stdout = sp.PIPE,
-            stderr = sp.PIPE
-        )
-        stdout_value, stderr_value = child.communicate()
-        packages = stdout_value.splitlines()
-        if package in packages:
-            module.exit_json(
-                msg='Package ' + package + ' is already installed.',
-                changed=False
-            )
-        if package not in packages:
-            [
-                imcl_path + ' -acceptLicense ' +
-                '-log /tmp/WAS_ND_Update-'+date_format+'.log ' +
-                '-sharedResourcesDirectory /opt/WebSphere/IMShared ' +
-                '-url ' + url + ' install ' + package
-            ],
-            shell=True,
-            stdout = sp.PIPE,
-            stdeerr = sp.PIPE
-        )
-        stdout_value, stderr_value = child.communicate()
-
-        if child.returncode != 0:
-            module.fail_json(
-                msg='Failed to install package %s from url %s' % (package, url),
-                changed=False
-            )
-        module.exit_json(
-            msg='Succesfully installed %s ' % (package),
-            changed=True
-        )
         
     if state == 'update':
         child = sp.Popen(
