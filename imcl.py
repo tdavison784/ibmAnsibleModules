@@ -91,14 +91,13 @@ EXAMPLE='''
 
 def imcl_run():
     module_args = dict(
-        response_loc=dict(type='str', required=False),
-        response_file=dict(type='bool', required=False),
         state=dict(type='str', required=False, choices=['absent', 'present','update']),
-        src=dict(required=False),
-        dest=dict(required=False),
-        package=dict(required=False),
+        src=dict(type='str', required=False),
+        dest=dict(type='str', required=False),
+        package=dict(type='str', required=False),
         imcl_path=dict(type='str', required=True),
-        url=dict(type='str', required=False)
+        secure_file=dict(type='str', required=False),
+        master_password=dict(type='str', required=False)
     )
     
 
@@ -106,89 +105,65 @@ def imcl_run():
         argument_spec=module_args
     )
 
-    response_loc = module.params['response_loc']
-    response_file = module.params['response_file']
     state = module.params['state']
     src = module.params['src']
     dest = module.params['dest']
     package = module.params['package']
     imcl_path = module.params['imcl_path']
-    url = module.params['url']
+    secure_file = module.params['secure_file']
+    master_password = module.params['master_password']
 
     date = datetime.datetime.now()
     date_format = date.strftime("%Y%M%D%H%M")
 
-    if response_file == True:
-        rsp_file = ET.parse(response_loc)
-        rsp_file_root = rsp_file.getroot()
-        for inst_loc in rsp_file_root.getiterator('profile'):
-            loc = inst_loc.attrib
-            if os.path.exists(loc['installLocation']) == True:
-                module.exit_json(
-                    msg='WAS ND is already installed',
-                    changed=False
-                )
 
-    if response_file == True:
-        rsp_file = ET.parse(response_loc)
-        rsp_file_root = rsp_file.getroot()
-        for inst_loc in rsp_file_root.getiterator('profile'):
-            loc = inst_loc.attrib
-            if os.path.exists(loc['installLocation']) == False:
-                child = sp.Popen(
-                    [
-                        imcl_path + ' -acceptLicense ' +
-                        '-log /tmp/WAS_ND_Install-'+date_format+'.log ' +
-                        '-input ' + response_loc
-                    ],
-                    shell=True,
-                    stdout = sp.PIPE,
-                    stderr = sp.PIPE
-                )
-                stdout_value, stderr_value = child.communicate()
-                if child.returncode != 0:
-                    module.fail_json(
-                        msg='Failed to install WAS. For more details check log in /tmp/',
-                        changed=False,
-                        stderr=stderr_value,
-                        stdout=stdout_value
-                    )
-                module.exit_json(
-                    msg='Succesfully installed WAS ND.',
-                    changed=True
-                )
-
-    if state == 'present' and os.path.exists(dest+'/bin/versionInfo.sh') == False:
-        child = sp.Popen(
+	if os.path.exists(imcl_path):
+		child = sp.Popen(
             [
-                imcl_path + ' -acceptLicense ' +
-                '-log /tmp/WAS_ND_Install-'+date_format+'.log ' +
-                '-repositories ' + src + ' -installationDirectory ' +
-                dest + ' install ' + package +
-                ' -sharedResourcesDirectory /opt/WebSphere/IMShared'
+                imcl_path + ' listInstalledPackages'
             ],
             shell=True,
             stdout = sp.PIPE,
             stderr = sp.PIPE
         )
         stdout_value, stderr_value = child.communicate()
-        if child.returncode != 0:
-            module.fail_json(
-                msg='Failed to install WAS. For more details see log in /tmp/',
-                changed=False,
-                stderr = stderr_value,
-                stdout = stdout_value
+        packages = stdout_value.splitlines()
+        if package in packages:
+            module.exit_json(
+                msg='Package ' + package + ' is already installed.',
+                changed=False
             )
-        module.exit_json(
-            msg='Succesfully installed package ' + package,
-            changed=True
+	
+    if state == 'present' and secure_file:
+        child = sp.Popen(
+            [
+                imcl_path + ' -repositories ' + src + ' install ' + package +
+                ' -installationDirectory ' + dest + ' -secureStorageFile ' + secure_file +
+                ' -masterPasswordFile ' + master_password + ' -acceptLicense'
+            ],
+            shell=True,
+            stdout=sp.PIPE,
+            stderr=sp.PIPE
         )
-    elif state == 'present' and os.path.exists(dest+'/bin/versionInfo.sh'):
-        module.exit_json(
-            msg='WAS ND is already installed',
-            changed=False
-        )
-        
+        stdout_value, stderr_value = child.communicate()
+        if child.returncode != 0:
+            module.fail_json( msg='Failed to install package ' + package + ' to location ' + dest, changed=False )
+        module.exit_json( msg='Successfully installed package ' + package + ' to location ' + dest, changed=True )
+    elif state == 'present':
+        child = sp.Popen(
+		    [
+			    imcl_path + ' -acceptLicense -repositories ' + src +
+				' -installationDirectory ' + dest + ' -log /tmp/IBM-'+package +
+				' -sharedResourcesDirectory /opt/WebSphere/IMShared install ' + package
+			],
+			shell=True
+			stdout=sp.PIPE,
+			stderr=sp.PIPE
+		)
+        stdout_value, stderr_value = child.communicate()
+		if child.returncode != 0:
+			module.fail_json( msg='Failed to install package ' + package + ' to dir ' + dest, changed=False, stderr=stderr_value)
+		module.exit_json( msg='Successfully installed package ' + package + ' to dir ' + dest, changed=True)
     if state == 'update':
         child = sp.Popen(
             [
@@ -260,7 +235,7 @@ def imcl_run():
                     stdout = stdout_value
                 )
             module.exit_json(
-                msg='Succesfully uninstalled package ' + package + ' from cell.',
+                msg='Successfully uninstalled package ' + package + ' from cell.',
                 changed=True
             )
         if package not in packages:
