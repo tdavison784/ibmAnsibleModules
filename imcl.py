@@ -156,7 +156,7 @@ def imcl_run():
 		' -installationDirectory ' + dest + ' -log /tmp/IBM-'+package +
 		' -sharedResourcesDirectory /opt/WebSphere/IMShared install ' + package
             ],
-            shell=True
+            shell=True,
             stdout=sp.PIPE,
             stderr=sp.PIPE
         )
