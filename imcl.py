@@ -151,19 +151,19 @@ def imcl_run():
         module.exit_json( msg='Successfully installed package ' + package + ' to location ' + dest, changed=True )
     elif state == 'present':
         child = sp.Popen(
-		    [
-			    imcl_path + ' -acceptLicense -repositories ' + src +
-				' -installationDirectory ' + dest + ' -log /tmp/IBM-'+package +
-				' -sharedResourcesDirectory /opt/WebSphere/IMShared install ' + package
-			],
-			shell=True
-			stdout=sp.PIPE,
-			stderr=sp.PIPE
-		)
+            [
+                imcl_path + ' -acceptLicense -repositories ' + src +
+		' -installationDirectory ' + dest + ' -log /tmp/IBM-'+package +
+		' -sharedResourcesDirectory /opt/WebSphere/IMShared install ' + package
+            ],
+            shell=True
+            stdout=sp.PIPE,
+            stderr=sp.PIPE
+        )
         stdout_value, stderr_value = child.communicate()
-		if child.returncode != 0:
-			module.fail_json( msg='Failed to install package ' + package + ' to dir ' + dest, changed=False, stderr=stderr_value)
-		module.exit_json( msg='Successfully installed package ' + package + ' to dir ' + dest, changed=True)
+        if child.returncode != 0:
+	    module.fail_json( msg='Failed to install package ' + package + ' to dir ' + dest, changed=False, stderr=stderr_value)
+	module.exit_json( msg='Successfully installed package ' + package + ' to dir ' + dest, changed=True)
     if state == 'update':
         child = sp.Popen(
             [
