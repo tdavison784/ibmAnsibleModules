@@ -117,8 +117,8 @@ def imcl_run():
     date_format = date.strftime("%Y%M%D%H%M")
 
 
-	if os.path.exists(imcl_path):
-		child = sp.Popen(
+    if os.path.exists(imcl_path):
+        child = sp.Popen(
             [
                 imcl_path + ' listInstalledPackages'
             ],
