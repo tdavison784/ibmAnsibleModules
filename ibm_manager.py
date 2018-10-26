@@ -63,7 +63,7 @@ result:
     description: Descibes changed state or failed state
     type: str
 message:
-    description: Succesfully put node agent into a state for profile
+    description: Succesfully sent Deployment Manager into state
 
 '''
 
