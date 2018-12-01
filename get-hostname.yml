@@ -1,0 +1,9 @@
+---
+-
+
+  hosts: localhost
+  tasks:
+    -
+      name: print hostname
+      debug:
+        var: ansible_fact['ansible_nodename']
