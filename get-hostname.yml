@@ -10,4 +10,4 @@
     -
       name: show hostname
       debug:
-        var: facts['ansible_nodename']
+        var: facts
