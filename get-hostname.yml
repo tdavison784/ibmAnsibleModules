@@ -4,6 +4,10 @@
   hosts: localhost
   tasks:
     -
-      name: print hostname
+      name: gather facts
+      setup:
+      register: facts
+    -
+      name: show hostname
       debug:
-        var: ansible_fact['ansible_nodename']
+        var: facts['ansible_nodename']
