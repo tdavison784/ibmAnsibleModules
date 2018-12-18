@@ -8,6 +8,7 @@ ANSIBLE_METADATA = {
     'status': ['preview'],
     'supported_by': 'community'}
 
+
 DOCUMENTATION = '''
 ---
 module: ibm_im
@@ -42,6 +43,7 @@ options:
 author:
     - Tom Davison (@tntdavison784)
 '''
+
 
 EXAMPLES = '''
 - name: Install IBM IM with non standard dest
