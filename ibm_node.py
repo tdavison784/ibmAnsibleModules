@@ -3,12 +3,10 @@
 import os
 from ansible.module_utils.basic import AnsibleModule
 
-
 ANSIBLE_METADATA = {
     'metadata_version': '1.1',
     'status': ['preview'],
     'supported_by': 'community'}
-
 
 DOCUMENTATION = '''
 ---
@@ -116,6 +114,7 @@ def start_node(module,state,path,profile):
         module.exit_json(
             msg='>>>>>>>> Node agent is already running <<<<<<<<'
         )
+
 def main():
     """Main Function of the module.
     Function will import other modules into main body to run the main logic"""
@@ -125,18 +124,44 @@ def main():
             state=dict(type='str', required=True),
             path=dict(type='str', required=True),
             profile=dict(type='str', required=True)
-        )
+        ),
+        supports_check_mode = True
     )
 
     state = module.params['state']
     path = module.params['path']
     profile = module.params['profile']
 
-    if state == 'stop':
+    if state == 'stop' and not module.check_mode:
         stop_node(module,state,path,profile)
 
-    if state == 'start':
+    if state == 'start' and not module.check_mode:
         start_node(module,state,path,profile)
+
+    if module.check_mode:
+        if state == 'stop':
+            if os.path.exists("%s/profiles/%s/logs/nodeagent/nodeagent.pid"):
+                module.exit_json(
+                    msg="Sending Nodeagent into %s state" % (state),
+                    changed=True
+                )
+            else:
+                module.exit_json(
+                    msg="NodeAgent is already in %s state" % (state),
+                    changed=False
+                )
+
+        if state == 'start':
+            if not os.path.exists("%s/profiles/%s/logs/nodeagent/nodeagent.pid"):
+                module.exit_json(
+                    msg="Sending node agent into %s state." % (state),
+                    changed=True
+                )
+            else:
+                module.exit_json(
+                    msg="NodeAgent is already in %s state." % (state),
+                    changed=False
+                )
 
 if __name__ == '__main__':
     main()
