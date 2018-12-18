@@ -67,7 +67,6 @@ message:
 
 '''
 
-
 def stop_manager(module, path, profile):
     """Function to send IBM Deployment Manager into a stopped state.
     This function is idempotent, meaning it will only stop the dmgr profile
@@ -116,29 +115,28 @@ def start_manager(moduele, path, profile):
             msg='>>>>>>>> Deployment Manager is already running <<<<<<<<'
         )
 
-
-
 def main():
-	"""Main Module logic.
-        Imports sub functions to determine state status.
-        """
+    """
+	Main Module logic.
+    Imports sub functions to determine state status.
+    """
 
-	module_args = dict(
+    module_args = dict(
 		state = dict(type='str', required=True, choices=['start', 'stop']),
 		profile_root = dict(type='str', required=True)
 	)
 
-	module = AnsibleModule(
+    module = AnsibleModule(
 		argument_spec = module_args,
                 supports_check_mode = True
 	)
 
-	state = module.params['state']
-	profile_root = module.params['profile_root']
+    state = module.params['state']
+    profile_root = module.params['profile_root']
 
 
-	if state == 'start' and not module.check_mode:
-            start_manager(module, path, profile)
+    if state == 'start' and not module.check_mode:
+        start_manager(module, path, profile)
 
         if state == 'stop' and not module.check_mode:
             stop_manager(module, path, profile)
@@ -168,7 +166,6 @@ def main():
                             changed=True
                     )
 
-
 if __name__ == "__main__":
-	main()
+    main()
 
