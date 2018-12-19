@@ -9,23 +9,24 @@ ANSIBLE_METADATA = {
     'status': ['preview'],
     'supported_by': 'community'}
 
-
 DOCUMENTATION = '''
 ---
 module: ibm_imcl
 
-short_description: Module that takes care of managing IBM products via imcl cl tool
+short_description: Module that takes care of installing packages via imcl cli.
 
 version_added: "2.1"
 
 description:
-    - Module that takes care of managing ibm products via imcl tool.
-    - Module relies on imcl to query cell for packages to verify existance.
+    - Module that takes care of installing IBM products via imcl cli.
+    - Module does a package lookup within the target cell to check for package existance.
+    - Depending on the specified module state, the package check will determine the outcome of the run.
+    - Module supports dry runs.
 
 options:
     state:
         description:
-            - Specified state of IBM IM. Present will install, and absent will uninstall.
+            - Specified state of package. 
         required: true
         choices:
           - present
@@ -33,26 +34,25 @@ options:
           - update
     src:
         description:
-            - Path to IBM package binaries. E.g /tmp/WAS_ND_9/repository.config
+            - Path to IBM IM installation binaries. E.g /tmp/WASND8.5.5/
         required: false
     dest:
         description:
-            - Installation Path where IBM package will be installed. E.g /opt/IBM/WebSphere/AppServer
+            - Installation Path where package will be installed. E.g /opt/IBM/WebSphere/AppServer
         required: false
     path:
         description:
-            - Path that leads to imcl executable. E.g /opt/IBM/InstallationManager/eclipse/tools/imcl
+            - Path that leads to imcl tool for installing packages.
         required: true
     name:
         description:
-            - Name of IBM package to be installed.
-            required: true
+            - Name of package to be installed, updated, or removed from any given cell.
+        required: true
 
 
 author:
     - Tom Davison (@tntdavison784)
 '''
-
 
 EXAMPLES = '''
 - name: Install IBM ND version 8.5.5
@@ -74,14 +74,22 @@ EXAMPLES = '''
     name: com.ibm.websphere.ND.v85_8.5.5013.20180112_1418
 '''
 
-
 RETURN = '''
-result:
-    description: Descibes changed state or failed state
+update:
+    description: Describes state of updating a package
     type: str
 message:
-    description: Succesfully installed, or removed, or updated package
-
+    description: Successfully updated package: <package_name> into cell.
+install:
+    description: Describes state after installing a package
+    type: str
+message:
+    description: Successfully installed package: <package_name> into cell.
+absent:
+    description: Describes state after uninstalling a package.
+    type: str
+message:
+    description: Successfully removed package: <package_name> from cell.
 '''
 
 
@@ -127,7 +135,7 @@ def update_package(module,path,src,name):
 def uninstall_package(module,path,name):
     """Functiont that will remove any given package from target environment."""
 
-    remove_package = module.run_command(path + "uninstall " + name
+    remove_package = module.run_command(path + " uninstall " + name
                                         + " -log /tmp/IBM-" + name + ".log", use_unsafe_shell=True)
 
     if remove_package[0] != 0:
@@ -170,7 +178,9 @@ def main():
             path=dict(type='str', required=True),
             name=dict(type='str', required=False)
         ),
-        supports_check_mode = True
+        supports_check_mode = True,
+        required_if=[
+            ["state","present", ["dest"]]]
     )
 
     state = module.params['state']
@@ -181,27 +191,27 @@ def main():
 
     pckg_check = package_check(module,path,name)
 
+
     if pckg_check != 1:
         if state == 'present' and not module.check_mode:
             install_package(module,path,src,dest,name)
         if state == 'update' and not module.check_mode:
             update_package(module,path,src,name)
+        if module.check_mode:
+            if state == 'present':
+                module.exit_json(msg="Package: %s will be installed to location %s" % (name,dest),change=True)
+            if state == 'update':
+                module.exit_json(msg="Package: %s will be updated" % (name),changed=True)
+            if state == 'absent':
+                module.exit_json(msg="Package: %s is not present in cell. Nothing to remove." % (name),changed=False)
+    elif pckg_check != 0:
+        if state == 'present':
+            module.exit_json(msg="Package %s is already present." % (name),changed=False)
         if state == 'absent' and not module.check_mode:
             uninstall_package(module,path,name)
         if module.check_mode:
-            if state == 'present':
-                module.exit_json(msg="Package: %s will be installed to location %s",change=True) % (name, dest)
-            if state == 'update':
-                module.exit_json(msg="Package: %s will be updated",changed=True) % (name)
             if state == 'absent':
-                module.exit_json(msg="Package: %s will be removed",changed=True) % (name)
-
-    if pckg_check != 0:
-        if module.check_mode:
-            if state == 'present' or 'update':
-                module.exit_json(msg="Package: %s is already present",changed=False) % (name)
-            if state == 'absent':
-                module.exit_json(msg="Package: %s is not present in cell.",changed=False) % (name)
+                module.exit_json(msg="Package %s will be removed." % (name),changed=False)
 
 
 if __name__ == '__main__':
