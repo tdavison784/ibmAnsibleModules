@@ -39,7 +39,7 @@ options:
     dest:
         description:
             - Installation Path where package will be installed. E.g /opt/IBM/WebSphere/AppServer
-        required: false
+        required_if: state == 'present'
     path:
         description:
             - Path that leads to imcl tool for installing packages.
@@ -48,6 +48,10 @@ options:
         description:
             - Name of package to be installed, updated, or removed from any given cell.
         required: true
+    shared_resource:
+        description:
+            - Path to sharedResources directory for Product install. E.g /opt/IBM/IMShared
+        required_if: state == 'present' or 'update'
 
 
 author:
@@ -93,12 +97,12 @@ message:
 '''
 
 
-def install_package(module,path,src,dest,name):
+def install_package(module,path,src,shared_resource,dest,name):
     """Function that takes care of installing new packages into the target environment."""
 
     package_install =  module.run_command(path + " -acceptLicense -repositories " + src +
                                           " -installationDirectory " + dest + " -log /tmp/IBM-"+name+".log " +
-                                          "-sharedResourcesDirectory /opt/WebSphere/IMShared install " + name,
+                                          "-sharedResourcesDirectory " + shared_resource + " install " + name,
                                           use_unsafe_shell=True)
     if package_install[0] != 0:
         module.fail_json(
@@ -114,10 +118,10 @@ def install_package(module,path,src,dest,name):
     )
 
 
-def update_package(module,path,src,name):
+def update_package(module,path,src,shared_resource,name):
     """Function that updates packages for target environment."""
 
-    package_update = module.run_command(path + "-acceptLicense -sharedResourcesDirectory /opt/WebSphere/IMShared "
+    package_update = module.run_command(path + "-acceptLicense -sharedResourcesDirectory " + shared_resource
                                         + " install " + name + " -repositories " + src +
                                         " -log /tmp/IBM-" + name +".log", use_unsafe_shell=True)
     if package_update[0] != 0:
@@ -176,11 +180,13 @@ def main():
             src=dict(type='str', required=True),
             dest=dict(type='str', required=False),
             path=dict(type='str', required=True),
-            name=dict(type='str', required=False)
+            name=dict(type='str', required=False),
+            shared_resource=dict(type='str', required=False)
         ),
         supports_check_mode = True,
         required_if=[
-            ["state","present", ["dest"]]]
+            ["state","present", ["dest", "shared_resource"],
+             ["state","update", ["dest", "shared_resource"]]]]
     )
 
     state = module.params['state']
@@ -188,15 +194,16 @@ def main():
     dest = module.params['dest']
     path = module.params['path']
     name = module.params['name']
+    shared_resource = module.params['shared_resource']
 
     pckg_check = package_check(module,path,name)
 
 
     if pckg_check != 1:
         if state == 'present' and not module.check_mode:
-            install_package(module,path,src,dest,name)
+            install_package(module,path,src,shared_resource,dest,name)
         if state == 'update' and not module.check_mode:
-            update_package(module,path,src,name)
+            update_package(module,path,shared_resource,src,name)
         if module.check_mode:
             if state == 'present':
                 module.exit_json(msg="Package: %s will be installed to location %s" % (name,dest),change=True)
