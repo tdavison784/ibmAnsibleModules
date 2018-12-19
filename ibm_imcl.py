@@ -66,11 +66,13 @@ EXAMPLES = '''
     dest: /opt/IBM/WebSphere/AppServer
     path: /opt/IBM/InstallationManager/eclipse/tools/imcl
     name: com.ibm.websphere.ND.v85_8.5.5012.20170627_1018
+    shared_resource: /opt/IBM/IMShared
 - name: Uninstall IBM ND version 8.5.5
   ibm_imcl:
     state: absent
     path: /opt/IBM/InstallationManager/eclipse/tools/imcl
     name: com.ibm.websphere.ND.v85_8.5.5012.20170627_1018
+    shared_resource: /opt/IBM/IMShared
 - name: Update WAS ND to FixPack 8.5.5.13
   ibm_imcl:
     state: update
