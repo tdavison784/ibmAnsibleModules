@@ -1,5 +1,7 @@
 #!/usr/bin/python
-import subprocess as sp
+
+
+import os
 from ansible.module_utils.basic import *
 
 
@@ -45,6 +47,7 @@ author:
     - Tom Davison (@tntdavison784)
 '''
 
+
 EXAMPLES = '''
 - name: Stop Deployment Manager
   ibm_node:
@@ -58,6 +61,7 @@ EXAMPLES = '''
     profile: DmgrProfile
 '''
 
+
 RETURN = '''
 result:
     description: Descibes changed state or failed state
@@ -67,7 +71,8 @@ message:
 
 '''
 
-def stop_manager(module, path, profile):
+
+def stop_manager(module,path,profile):
     """Function to send IBM Deployment Manager into a stopped state.
     This function is idempotent, meaning it will only stop the dmgr profile
     if it is up and running. Function will do a filesystem check for a .pid file
@@ -75,7 +80,7 @@ def stop_manager(module, path, profile):
     that the deployment manager is running.
     """
 
-    if  os.path.exists("%s/profiles/%s/logs/dmgr/dmgr.pid"):
+    if  os.path.exists(path+"/profiles/"+profile+"/logs/dmgr/dmgr.pid"):
         stop_dmgr  = module.run_command(path+'/profiles/'+profile+'/bin/stopManager.sh', use_unsafe_shell=True)
         if stop_dmgr[0] != 0:
             module.fail_json(
@@ -92,14 +97,15 @@ def stop_manager(module, path, profile):
             msg='>>>>>>>> Deployment Manager is not running <<<<<<<<'
         )
 
-def start_manager(module, path, profile):
+
+def start_manager(module,path,profile):
     """Function that will send IBM Deployment Manager into a started state.
     This function is idempotent. Meaning that it will only start the deploymment manager if it is not running.
     Function does a filesystem check to see if a .pid file exists. If file exits, module will return a OK run call.
     """
 
-    if not os.path.exists("%s/profiles/%s/logs/dmgr/dmgr.pid"):
-        module.run_command(path+'/profiles/'+profile+'/bin/startManager.sh', use_unsafe_shell=True)
+    if not os.path.exists(path+"/profiles/"+profile+"/logs/dmgr/dmgr.pid"):
+        start_dmgr = module.run_command(path+'/profiles/'+profile+'/bin/startManager.sh', use_unsafe_shell=True)
         if start_dmgr[0] != 0:
             module.fail_json(
                 msg='Failed to send Deployment Manager %s for profile %s' % (state),
@@ -115,56 +121,56 @@ def start_manager(module, path, profile):
             msg='>>>>>>>> Deployment Manager is already running <<<<<<<<'
         )
 
+
 def main():
     """
 	Main Module logic.
     Imports sub functions to determine state status.
     """
 
-    module_args = dict(
-		state = dict(type='str', required=True, choices=['start', 'stop']),
-		profile_root = dict(type='str', required=True)
-	)
-
     module = AnsibleModule(
-		argument_spec = module_args,
-                supports_check_mode = True
-	)
+        argument_spec=dict(
+            state=dict(type='str', required=True, choices=['start', 'stop']),
+            profile=dict(type='str', required=True),
+            path=dict(type='str', required=True)
+        ),
+        supports_check_mode = True
+    )
 
     state = module.params['state']
-    profile_root = module.params['profile_root']
+    profile = module.params['profile']
+    path = module.params['path']
 
 
     if state == 'start' and not module.check_mode:
         start_manager(module, path, profile)
 
-        if state == 'stop' and not module.check_mode:
-            stop_manager(module, path, profile)
+    if state == 'stop' and not module.check_mode:
+        stop_manager(module, path, profile)
 
-        elif module.check_module:
-            if state == 'stop':
-                if  os.path.exists("%s/profile/%s/logs/dmgr/dmgr.pid"):
-                    module.exit_json(
-                        msg='Sending Deployment Manager into %s' % (state),
-                        changed=True
-                    )
-                else:
-                    if not os.path.exists("%s/profiles/%s/logs/dmgr/dmgr.pid"):
-                        module.exit_json(
-                                msg='Deployment Manager already in a %s state ' %(state),
-                                changed=False
-                                )
-            if state == 'start':
-                if  os.path.exists("%s/profiles/%s/logs/dmgr/dmgr.pid"):
-                    module.exit_json(
-                            msg='Deployment Manager already in a %s state ' %(state),
-                            changed=False
-                    )
-                else:
-                    module.exit_json(
-                            msg='Sending Deployment Manager into a %s state ' % (state),
-                            changed=True
-                    )
+    if module.check_mode:
+        if state == 'stop':
+            if  os.path.exists(path+"/profiles/"+profile+"/logs/dmgr/dmgr.pid"):
+                module.exit_json(
+                    msg='Sending Deployment Manager into %s' % (state),
+                    changed=True
+                )
+            else:
+                module.exit_json(
+                    msg='Deployment Manager already in a %s state ' %(state),
+                    changed=False
+                )
+        if state == 'start':
+            if  os.path.exists(path+"/profiles/"+profile+"/logs/dmgr/dmgr.pid"):
+                module.exit_json(
+                    msg='Deployment Manager already in a %s state ' %(state),
+                    changed=False
+                )
+            else:
+                module.exit_json(
+                    msg='Sending Deployment Manager into a %s state ' % (state),
+                    changed=True
+                )
 
 if __name__ == "__main__":
     main()
