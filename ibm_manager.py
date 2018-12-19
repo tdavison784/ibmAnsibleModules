@@ -92,7 +92,7 @@ def stop_manager(module, path, profile):
             msg='>>>>>>>> Deployment Manager is not running <<<<<<<<'
         )
 
-def start_manager(moduele, path, profile):
+def start_manager(module, path, profile):
     """Function that will send IBM Deployment Manager into a started state.
     This function is idempotent. Meaning that it will only start the deploymment manager if it is not running.
     Function does a filesystem check to see if a .pid file exists. If file exits, module will return a OK run call.
