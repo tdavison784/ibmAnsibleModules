@@ -123,7 +123,7 @@ def install_package(module,path,src,shared_resource,dest,name):
 def update_package(module,path,src,shared_resource,name):
     """Function that updates packages for target environment."""
 
-    package_update = module.run_command(path + "-acceptLicense -sharedResourcesDirectory " + shared_resource
+    package_update = module.run_command(path + " -acceptLicense -sharedResourcesDirectory " + shared_resource
                                         + " install " + name + " -repositories " + src +
                                         " -log /tmp/IBM-" + name +".log", use_unsafe_shell=True)
     if package_update[0] != 0:
@@ -134,6 +134,23 @@ def update_package(module,path,src,shared_resource,name):
         )
     module.exit_json(
         msg="Succesfully updated package: %s" % (name),
+        changed=True
+    )
+
+
+def rollback_package(module,path,name):
+    """Function to rollback to a previous package version."""
+
+    rllbck_pckg = module.run_command(path+" rollback "+name,use_unsafe_shell=True)
+
+    if rllbck_pckg[0] != 0:
+        module.fail_json(
+            msg="Failed to rollback package: %s because the package was not previously installed" %(name),
+            changed=False,
+            stderr=rllbck_pckg[2]
+        )
+    module.exit_json(
+        msg="Successfully rolled back package: %s" %(name),
         changed=True
     )
 
@@ -178,7 +195,7 @@ def main():
 
     module = AnsibleModule(
         argument_spec=dict(
-            state=dict(type='str', required=True, choices=['present', 'absent', 'update']),
+            state=dict(type='str', required=True, choices=['present', 'absent', 'update', 'rollback']),
             src=dict(type='str', required=True),
             dest=dict(type='str', required=False),
             path=dict(type='str', required=True),
@@ -206,6 +223,8 @@ def main():
             install_package(module,path,src,shared_resource,dest,name)
         if state == 'update' and not module.check_mode:
             update_package(module,path,shared_resource,src,name)
+        if state == 'rollback':
+            rollback_package(module,path,name)
         if module.check_mode:
             if state == 'present':
                 module.exit_json(msg="Package: %s will be installed to location %s" % (name,dest),change=True)
@@ -213,15 +232,20 @@ def main():
                 module.exit_json(msg="Package: %s will be updated" % (name),changed=True)
             if state == 'absent':
                 module.exit_json(msg="Package: %s is not present in cell. Nothing to remove." % (name),changed=False)
+            if state == 'rollback':
+                module.exit_json(msg="Package %s is not present in cell. Nothing to remove" % (name),changed=False)
     elif pckg_check != 0:
         if state == 'present':
             module.exit_json(msg="Package %s is already present." % (name),changed=False)
         if state == 'absent' and not module.check_mode:
             uninstall_package(module,path,name)
+        if state == 'rollback' and not module.check_mode:
+            rollback_package(module,path,name)
         if module.check_mode:
             if state == 'absent':
-                module.exit_json(msg="Package %s will be removed." % (name),changed=False)
-
+                module.exit_json(msg="Package %s will be removed." % (name),changed=True)
+            if state == 'rollback':
+                module.exit_json(msg="Package %s will be rolled back" %(name),changed=True)
 
 if __name__ == '__main__':
     main()
