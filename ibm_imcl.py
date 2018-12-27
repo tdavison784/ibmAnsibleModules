@@ -103,7 +103,7 @@ def install_package(module,path,src,shared_resource,dest,name):
     """Function that takes care of installing new packages into the target environment."""
 
     package_install =  module.run_command(path + " -acceptLicense -repositories " + src +
-                                          " -installationDirectory " + dest + " -log /tmp/IBM-"+name+".log " +
+                                          " -installationDirectory " + dest + " -log /tmp/IBM-Install.log " +
                                           "-sharedResourcesDirectory " + shared_resource + " install " + name,
                                           use_unsafe_shell=True)
     if package_install[0] != 0:
@@ -125,7 +125,7 @@ def update_package(module,path,src,shared_resource,name):
 
     package_update = module.run_command(path + " -acceptLicense -sharedResourcesDirectory " + shared_resource
                                         + " install " + name + " -repositories " + src +
-                                        " -log /tmp/IBM-" + name +".log", use_unsafe_shell=True)
+                                        " -log /tmp/IBM-Install.log", use_unsafe_shell=True)
     if package_update[0] != 0:
         module.fail_json(
             msg="Failed to update package: %s. Please see log in /tmp/ for more details." % (name),
@@ -159,7 +159,7 @@ def uninstall_package(module,path,name):
     """Functiont that will remove any given package from target environment."""
 
     remove_package = module.run_command(path + " uninstall " + name
-                                        + " -log /tmp/IBM-" + name + ".log", use_unsafe_shell=True)
+                                        + "-log /tmp/IBM-Install.log", use_unsafe_shell=True)
 
     if remove_package[0] != 0:
         module.fail_json(
@@ -222,7 +222,7 @@ def main():
         if state == 'present' and not module.check_mode:
             install_package(module,path,src,shared_resource,dest,name)
         if state == 'update' and not module.check_mode:
-            update_package(module,path,shared_resource,src,name)
+            update_package(module,path,src,shared_resource,name)
         if state == 'rollback':
             rollback_package(module,path,name)
         if module.check_mode:
