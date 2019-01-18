@@ -26,7 +26,7 @@ description:
 options:
     state:
         description:
-            - Specified state of package. 
+            - Specified state of package.
         required: true
         choices:
           - present
@@ -99,7 +99,7 @@ message:
 '''
 
 
-def install_package(module,path,src,shared_resource,dest,name):
+def install_package(module,path,src,shared_resource,dest,name,properties):
     """Function that takes care of installing new packages into the target environment."""
 
     if properties is None:
@@ -208,7 +208,7 @@ def main():
             path=dict(type='str', required=True),
             name=dict(type='str', required=False),
             shared_resource=dict(type='str', required=False),
-            properties=dict(type='str', required=False)
+            properties=dict(type='str', required=False, default=None)
         ),
         supports_check_mode = True,
         required_if=[
@@ -222,13 +222,13 @@ def main():
     path = module.params['path']
     name = module.params['name']
     shared_resource = module.params['shared_resource']
-    Properties = module.params['properties']
+    properties = module.params['properties']
     pckg_check = package_check(module,path,name)
 
 
     if pckg_check != 1:
         if state == 'present' and not module.check_mode:
-            install_package(module,path,src,shared_resource,dest,name)
+            install_package(module,path,src,shared_resource,dest,name,properties)
         if state == 'update' and not module.check_mode:
             update_package(module,path,src,shared_resource,name)
         if state == 'rollback':
