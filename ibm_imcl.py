@@ -26,7 +26,7 @@ description:
 options:
     state:
         description:
-            - Specified state of package. 
+            - Specified state of package.
         required: true
         choices:
           - present
@@ -99,12 +99,19 @@ message:
 '''
 
 
-def install_package(module,path,src,shared_resource,dest,name):
+def install_package(module,path,src,shared_resource,dest,name,properties):
     """Function that takes care of installing new packages into the target environment."""
 
-    package_install =  module.run_command(path + " -acceptLicense -repositories " + src +
+    if properties is None:
+        package_install =  module.run_command(path + " -acceptLicense -repositories " + src +
                                           " -installationDirectory " + dest + " -log /tmp/IBM-Install.log " +
                                           "-sharedResourcesDirectory " + shared_resource + " install " + name,
+                                          use_unsafe_shell=True)
+    if properties is not None:
+        package_install =  module.run_command(path + " -acceptLicense -repositories " + src +
+                                          " -installationDirectory " + dest + " -log /tmp/IBM-Install.log " +
+                                          "-sharedResourcesDirectory " + shared_resource + " install " + name +
+                                          " -properties " + properties,
                                           use_unsafe_shell=True)
     if package_install[0] != 0:
         module.fail_json(
@@ -200,7 +207,8 @@ def main():
             dest=dict(type='str', required=False),
             path=dict(type='str', required=True),
             name=dict(type='str', required=False),
-            shared_resource=dict(type='str', required=False)
+            shared_resource=dict(type='str', required=False),
+            properties=dict(type='str', required=False, default=None)
         ),
         supports_check_mode = True,
         required_if=[
@@ -214,13 +222,13 @@ def main():
     path = module.params['path']
     name = module.params['name']
     shared_resource = module.params['shared_resource']
-
+    properties = module.params['properties']
     pckg_check = package_check(module,path,name)
 
 
     if pckg_check != 1:
         if state == 'present' and not module.check_mode:
-            install_package(module,path,src,shared_resource,dest,name)
+            install_package(module,path,src,shared_resource,dest,name,properties)
         if state == 'update' and not module.check_mode:
             update_package(module,path,src,shared_resource,name)
         if state == 'rollback':
