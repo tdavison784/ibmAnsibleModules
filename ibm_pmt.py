@@ -167,6 +167,79 @@ def check_accountExistance(module, path, profile):
         module.exit_json(">>>>>>>> Profile %s already exists in cell <<<<<<<<" 
                 %(profile),
         changed=False)
+    else:
+        module.exit_json(
+                msg=">>>>>>>> Profile %s doesn't exist in cell <<<<<<<<" % (profile),
+                changed=False
+        )
+
+
+def remove_account(module, path, profile):
+    """
+    Function that will remove an account from the cell
+    if it is present
+    """
+
+    remove_account_cmd = "%s/bin/manageprofiles.sh -delete %s"
+    account_remove = module.run_command(remove_account_cmd, use_unsafe_shell=True)
+
+    if account_remove[0] != 0:
+        module.fail_json(
+                msg=">>>>>>>> Profile: %s failed to delete. <<<<<<<<" % (profile),
+                changed=False,
+                account_remove[2]
+        )
+    module.exit_json(
+            msg=">>>>>>>> Successfully deleted profile: %s <<<<<<<<" % (profile),
+            changed=True
+    )
+
+
+def backup_profile(module, admin_user, admin_password, dest, profile,
+        profile_path):
+    """
+    Function that will backup any given WAS profile
+    """
+
+
+    backup_profile_cmd = "%s/bin/backupConfig.sh / %s/%s_backup_%s.zip \
+            -user %s -password %s -profileName %s" % (profile_path,
+            dest, profile, date, admin_user, admin_password, profile)
+    backup_profile = module.run_command(backup_profile_cmd, use_unsafe_shell=True)
+
+    if backup_profile[0] != 0:
+        module.fail_json(
+                msg=">>>>>>>> Failed to backup profile: %s  <<<<<<<<" % (profile),
+                changed=False,
+                stderr=backup_profile[2]
+        )
+    module.exit_json(
+            msg=">>>>>>>> Successfully backed up profile: %s in /tmp/ <<<<<<<<" % (profile),
+            changed=True
+    )
+
+
+def restore_profile(module, admin_user, admin_password, dest, profile,
+        profile_path):
+    """
+    Function that will restore a backup profile archive
+    """
+
+    restore_profile_cmd = "%s/bin/restoreConfig.sh %s/%s_backup_%s.zip \
+            -user %s -password %s -profileName %s" %(profile_path, dest,
+                    profile, date, admin_user, admin_password, profile)
+    restore_profile = module.run_command(restore_profile_cmd, use_unsafe_shell=True)
+
+    if restore_profile[0] != 0:
+        module.fail_json(
+                msg=">>>>>>>> Failed to restore profile: %s <<<<<<<<" %(profile),
+                changed=False,
+                stderr=restore_profile[2]
+        )
+    module.exit_json(
+            msg=">>>>>>>> Succesfully restored profile %s <<<<<<<<" %(profile),
+            changed=True
+    )
 
 
 def main():
@@ -202,19 +275,46 @@ def main():
 
 
     if profile_type == 'management' and state == 'present':
-        check_accountExistance(module, path, profile)
+        check_accountExistance(module, path, profile)  
         make_managerProfile(module, admin_user, admin_password, cell_name, path, profile_path, security)
     if profile_type == 'custom' and state == 'present':
-        check_accountExistance(module, path, profile)
+        check_accountExistance(module, path, profile) k
         make_customProfile(module, admin_user, admin_password, dmgr_host, profile, profile_path)
+    if state == 'absent':
+        check_accountExistance(module, path, profile) k
+        remove_account(module, path, profile)
+    if state == 'backup':
+        check_accountExistance(module, path, profile) k
+        backup_profile(module, admin_user, admin_password, dest, profile, prifle_path)
+    if state == 'restore':
+        check_accountExistance(module, path, profile) k
+        backup_profile(module, admin_user, admin_password, dest, profile, profile_path)
+
 
     if module.check_mode:
         if profile_type == 'management' or 'custom':
-            check_accountExistance(module, path, profile)
+            check_accountExistance(module, path, profile) k
             module.exit_json(
-                msg=">>>>>>>> Account %s will be created on run <<<<<<<<" %(profile),
+                msg=">>>>>>>> Profile %s will be created on run <<<<<<<<" %(profile),
                 changed=True
             )
+        if state == 'absent':
+            check_accountExistance(module, path, profile) k
+            module.exit_json(
+                    msg=">>>>>>>> Profile: %s will be removed <<<<<<<<" %(profile),
+                    changed=True
+            )
+        if state is 'restore':
+            check_accountExistance(module, path, profile) k
+            module.exit_json(
+                    msg=">>>>>>>> Profile: %s will be restored <<<<<<<<" %(profile),
+                    changed=True
+            )
+        if state is 'backup':
+            check_accountExistance(module, path, profile) k
+            module.exit_json(
+                    msg=">>>>>>>> Profile: %s will be backed up <<<<<<<<" %(profile),
+                    changed=True
 
 
 if __name__ == '__main__':
