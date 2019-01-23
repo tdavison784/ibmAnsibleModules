@@ -304,13 +304,13 @@ def main():
                     msg=">>>>>>>> Profile: %s will be removed <<<<<<<<" %(profile),
                     changed=True
             )
-        if state is 'restore':
+        if state == 'restore':
             check_accountExistance(module, path, profile) k
             module.exit_json(
                     msg=">>>>>>>> Profile: %s will be restored <<<<<<<<" %(profile),
                     changed=True
             )
-        if state is 'backup':
+        if state == 'backup':
             check_accountExistance(module, path, profile) k
             module.exit_json(
                     msg=">>>>>>>> Profile: %s will be backed up <<<<<<<<" %(profile),
