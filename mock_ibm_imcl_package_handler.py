@@ -1,4 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
+
+import sys
 
 DOCUMENTAION='''
 Class that mocks the real IBM IMCL CLI tool
@@ -35,77 +37,113 @@ def check_files():
         files = ['.repository.config', '.internal.config']
         for file in files:
             if os.path.exists(home+"/"+file):
-                print("Repository files already exist.")
                 break
             else:
                 with open(home+"/"+file, "w+") as f_obj:
                     f_obj.close()
+                    print("Created two hidden files under %s directory."%(home))
         return home
     except IOError:
-        print("Permission denied, cannot create file in %s directory.") % home
+        print("Permission denied, cannot create file in %s directory."%(home))
 
 
-def install_pckg(dest, name):
-    """Function that will do a mock install of a package.
-    This will first query the internal.config to see if anything exists.
-    It will place all packages into an array to be compared to packages to be installed.
-    This function will also be used for testing updates as logic is same.
+def get_avail_pckg():
+    """
+    Function to get all available packages. This function
+    will query ~/.repository.config and return all values
+    found from the file.
     """
 
-    usrhome = get_home()
+    src = get_home()+"/.repository.config"
 
-    src = usrhome+"/.repository.config"
+    with open(src, "r") as f_obj:
+        pckgs_avail = f_obj.readlines()
+        return pckgs_avail
+    f_obj.close()
 
-    repo_pack = []
-    with open(src, 'r') as f_obj:
-        packages = f_obj.readlines()
-        repo_pack.append(packages)
-        for package in repo_pack:
-            if name in package:
-                with open(usrhome + "/.internal.config", "r") as f_obj:
-                    inst_packages = f_obj.readlines()
-                    f_obj.close()
-                    if len(inst_packages) == 0:
-                        with open(usrhome + "/.internal.config", "w") as f:
-                            new_pckg = name
-                            f.writelines(new_pckg)
-                            f.close()
-                            print("Package " + name + " was successfully installed to " + dest + ".")
-                    else:
-                        for inst_package in inst_packages:
-                            if name in inst_package:
-                                print("Package " + name +" is already installed.")
-                                break
-                            else:
-                                print('Unrecognized package in .internal.config. Please check.')
-            else:
-                print("Package: " + name + " not found. Check .repository config to ensure correct spelling.")
+
+def get_inst_pckg():
+    """
+    Function to get list of packages installed. Function
+    will query ~/.internal.config and return a list of
+    installed packages.
+    """
+
+    src = get_home()+"/.internal.config"
+    with open(src, "r") as f_obj:
+        inst_pckgs = f_obj.readlines()
+        return inst_pckgs
+    f_obj.close()
+
+
+def inst_pckg(name, dest):
+    """
+    Function that will install packages if its not already present
+    """
+
+    src = get_home()+"/.internal.config"
+    exsting_pckgs = get_inst_pckg()
+    
+    if len(exsting_pckgs) < 1:
+        with open(src, "w") as f_obj:
+            f_obj.writelines(name)
+            f_obj.close()
+            print("Succesfully installed package: %s to %s."%(name,dest)) 
+    else:
+        for pckg in exsting_pckgs:
+            if name in pckg:
+                print("Package: %s is already  installed."%(name)) 
                 break
 
 
-def remove_pckg(dest, name):
-    """Function that will remove package or packages from the .internal.config"""
+def rmv_pckg(name, dest):
+    """
+    Function that will remove a package from .internal.config if it exists
+    in file.
+    """
 
-    usrhome = get_home()
+    src = get_home()+"/.internal.config"
+    inst_pckgs = get_inst_pckg()
 
-    src = usrhome+"/.internal.config"
+    if len(inst_pckgs) < 1:
+        print("No packages are installed. Nothing to remove.")
+        sys.exit(0)        
+    else:
+        for pckg in inst_pckgs:
+            if name in pckg:
+                inst_pckgs.remove(pckg)
+                with open(src, "w") as f_obj:
+                    f_obj.writelines(inst_pckgs)
+                    f_obj.close()
+                    print("Successfully removed package: %s from %s."%(name,dest)) 
 
-    with open(src, "r") as f_obj:
-        inst_packages = f_obj.readlines()
-        f_obj.close()
-        for inst_pckg in inst_packages:
-            if name in inst_pckg:
-                inst_packages.remove(inst_pckg)
-                with open(src, "w") as f:
-                    f.writelines(inst_packages)
-                    f.close()
-                print("Package " + name + " has been removed from " + dest)
-            else:
-                print("Package: " + name + " is not installed. Nothing to remove.")
 
+def main():
+    """Function to do all main logic.
+    This will call in the above sub functions to preform specific tasks
+    """
+
+    from sys import argv
+
+    check_files()
+
+    state = argv[1]
+    package = argv[2]
+    dest = argv[3]
+ 
+
+
+    if state == 'present':
+        inst_pckg(package, dest)
+    if state == 'update':
+        inst_pckg(package, dest)
+    if state == 'absent':
+        rmv_pckg(package, dest)
+    
+
+if __name__  == '__main__':
+    main()
 
 #remove_pckg("/opt/WebSphere/AppServer", "com.ibm.websphere.ND.v90_9.0.9.20180906_1004")
-install_pckg("/opt/WebSphere/AppServer", "com.ibm.websphere.ND.v90.9.0.10.20181228_1010")
-
-
+#install_pckg("/opt/WebSphere/AppServer", "com.ibm.websphere.ND.v90.9.0.10.20181228_1010")
 #check_files()
