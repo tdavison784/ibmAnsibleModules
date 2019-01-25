@@ -8,7 +8,6 @@ ANSIBLE_METADATA = {
     'status': ['preview'],
     'supported_by': 'community'}
 
-
 DOCUMENTATION = '''
 ---
 module: ibm_im
@@ -44,7 +43,6 @@ author:
     - Tom Davison (@tntdavison784)
 '''
 
-
 EXAMPLES = '''
 - name: Install IBM IM with non standard dest
   ibm_im:
@@ -70,7 +68,6 @@ message:
     description: Succesfully installed or uninstalled IBM IM
 
 '''
-
 
 def install_ibmim(module, src, dest):
     """Function that will install IBM Installation Manager.
@@ -99,14 +96,12 @@ def install_ibmim(module, src, dest):
                 changed=True,
             )
 
-
 def remove_ibmim(module, src):
     """Function that will remove IBM IM installation.
     The removal of IBM IM is associated with the installation users home directory.
     The uninstall binaries are located on RHEL/centos: /home/user/var/ibm/InstallationManager/uninstall/ directory.
     """
 
-    uninstall_im = module.run_command(src+'/uninstallc', use_unsafe_shell=True)
 
     try:
         if os.path.exists(src):
@@ -118,11 +113,10 @@ def remove_ibmim(module, src):
                     stdout=uninstall_im[1],
                     stderr=uninstall_im[2]
                 )
-            else:
-                module.exit_json(
-                    msg="Succesfully uninstalled IBM IM",
-                    changed=True
-                )
+            module.exit_json(
+                msg="Succesfully uninstalled IBM IM",
+                changed=True
+             )
 
         else:
             module.fail_json(
@@ -131,7 +125,6 @@ def remove_ibmim(module, src):
             )
     finally:
         pass
-
 
 def main():
     """Function that will do all the main logic for the module."""
