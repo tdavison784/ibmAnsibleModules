@@ -166,7 +166,7 @@ def uninstall_package(module,path,name):
     """Functiont that will remove any given package from target environment."""
 
     remove_package = module.run_command(path + " uninstall " + name
-                                        + "-log /tmp/IBM-Install.log", use_unsafe_shell=True)
+                                        + " -log /tmp/IBM-UnInstall.log", use_unsafe_shell=True)
 
     if remove_package[0] != 0:
         module.fail_json(
@@ -187,11 +187,13 @@ def package_check(module,path,name):
     """
 
     check_package = module.run_command(path + " listInstalledPackages", use_unsafe_shell=True)
-
-    if name in check_package[1]:
-        return 1
-    else:
-        return 0
+ 
+    name = name.split()
+    for package in name:
+      if package in check_package[1]:
+          return 1
+      else:
+          return 0
 
 
 def main():
