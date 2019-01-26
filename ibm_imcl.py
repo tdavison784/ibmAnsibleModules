@@ -44,6 +44,12 @@ options:
         description:
             - Path that leads to imcl tool for installing packages.
         required: true
+    properties:
+        description:
+            - Additonal properties to use during product install.
+            - For example, in order to install IHS you will need to use
+            - use user.ihs.allowNonRootSilentInstall=true,user.ihs.httpPort=8080
+        required: false
     name:
         description:
             - Name of package to be installed, updated, or removed from any given cell.
@@ -78,6 +84,19 @@ EXAMPLES = '''
     state: update
     path: /opt/IBM/InstallationManager/eclipse/tools/imcl
     name: com.ibm.websphere.ND.v85_8.5.5013.20180112_1418
+- name: INSTALL IBM IHS WITH PROPERTIES
+  ibm_imcl:
+    state: present
+    path: /opt/IBM/InstallationManager/eclipse/tools/imcl
+    dest: /opt/IBM/WebSphere/HTTPServer
+    name: com.ibm.websphere.IHS.v85_8.5.5000.20130514_1044
+    src: /tmp/IHS-Binaries/
+    properties: user.ihs.allowNonRootSilentInstall=true,user.ihs.httpPort=8080
+- name: ROLLBACK LATEST FIXPACK
+  ibm_imcl:
+    state: rollback
+    name: com.ibm.websphere.ND.v85_8.5.5013.20180112_1418
+    path: /opt/IBM/InstallationManager/eclipse/tools/imcl
 '''
 
 RETURN = '''
@@ -187,7 +206,7 @@ def package_check(module,path,name):
     """
 
     check_package = module.run_command(path + " listInstalledPackages", use_unsafe_shell=True)
- 
+
     name = name.split()
     for package in name:
       if package in check_package[1]:

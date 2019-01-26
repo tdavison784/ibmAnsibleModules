@@ -89,43 +89,50 @@ EXAMPLES = '''
     
 
 def make_managerProfile(module, admin_user, admin_password, cell_name, 
-        path, profile_path, security):
+        path, profile, profile_path, security):
     """
     Function that creates an Deployment manager profile
     for IBM WebSphere ND installations.
     """
 
+    if security == 'enabled':
+        security = 'true'
+    else:
+       security = 'false'
+
     if cell_name is not None:
-        create_dmgr_account = "%s/bin/manageprofiles.sh -create -templatePath \
-            %s/profileTemplates/management/ -adminUserName %s -adminPassword %s\
-             - cellName %s -enableAdminSecurity %s -profileRoot %s \
-              -personalCertValidityPeriod 15 \
-              -serverType DEPLOYMENT_MANAGER -signingCertValidityPeriod 20 \
-               -profileName %" % (path, path, admin_user, admin_password,
-                       cell_name, security, profile_path, profile)
-
-
-    if cell_name is None:
-        create_dmgr_account = "%s/bin/manageprofiles.sh -create -templatePath \
-            %s/profileTemplates/management/ -adminUserName %s -adminPassword %s\
-             -enableAdminSecurity %s -profileRoot %s -personalCertValidityPeriod 15 \
-              -serverType DEPLOYMENT_MANAGER -signingCertValidityPeriod 20 \
-               -profileName %" % (path, path, admin_user, admin_password,
-                       security, profile_path, profile)
+        create_dmgr_account = """{0}/bin/manageprofiles.sh -create -templatePath \
+{0}/profileTemplates/management/ -adminUserName {1} -adminPassword {2} \
+-cellName {3} -enableAdminSecurity {4} -profileRoot {5} \
+-personalCertValidityPeriod 15 \
+-serverType DEPLOYMENT_MANAGER -signingCertValidityPeriod 20 \
+-profileName {6}""".format(path, admin_user, admin_password,
+cell_name, security, profile_path, profile)
 
         mngr_acct_create = module.run_command(create_dmgr_account, use_unsafe_shell=True)
 
-        if mngr_acct_create[0] != 0:
-            module.fail_json(
-                    msg=">>>>>>>> Failed to create account: %s \
-                            . Review errors and try again <<<<<<<<" % (profile),
-                    changed=False,
-                    stderr=mngr_acct_create[2]
-            )
-        module.exit_json(
-            msg=">>>>>>>> Succesfully created account %s <<<<<<<<" % (profile),
-            changed=True
+
+    if cell_name is None:
+        create_dmgr_account = """{0}/bin/manageprofiles.sh -create -templatePath \
+{0}/profileTemplates/management/ -adminUserName {1} -adminPassword {2} \
+-enableAdminSecurity {3} -profileRoot {4} -personalCertValidityPeriod 15 \
+-serverType DEPLOYMENT_MANAGER -signingCertValidityPeriod 20 \
+-profileName {5}""".format(path, admin_user, admin_password,
+                security, profile_path, profile)
+
+        mngr_acct_create = module.run_command(create_dmgr_account, use_unsafe_shell=True)
+
+    if mngr_acct_create[0] != 0:
+        module.fail_json(
+            msg=">>>>>>>> Failed to create account: {0}. Review errors and try again. CMD:  {1} RC: {2} <<<<<<<<".format(profile, create_dmgr_account, mngr_acct_create[0]),
+            changed=False,
+            stderr=mngr_acct_create[2],
+            stdout=mngr_acct_create[1]
         )
+    module.exit_json(
+        msg=">>>>>>>> Succesfully created account %s <<<<<<<<" % (profile),
+        changed=True
+    )
 
 
 def make_customProfile(module, admin_user, admin_password, dmgr_host,
@@ -135,11 +142,10 @@ def make_customProfile(module, admin_user, admin_password, dmgr_host,
     """
 
     create_custom_profile = "%s/bin/manaeprofiles.sh - create \
-             -templatePath %s/profileTemplates/managed/ \
-              -dmgrAdminUserName %s -dmgrAdminPassword %s \
-               -profileRoot %s -profileName %s -dmgrHost %s"
-               % (path, path, admin_user, admin_password,
-                       profile_root, profile, dmgr_host)
+-templatePath %s/profileTemplates/managed/ \
+-dmgrAdminUserName %s -dmgrAdminPassword %s \
+-profileRoot %s -profileName %s -dmgrHost %s" % (path, path, admin_user, admin_password,
+profile_path, profile, dmgr_host)
 
     cstm_account_create = module.run_command(create_custom_profile, use_unsafe_shell=True)
     if cstm_account_create[0] != 0:
@@ -154,7 +160,7 @@ def make_customProfile(module, admin_user, admin_password, dmgr_host,
     )
 
 
-def check_accountExistance(module, path, profile):
+def check_accountExistance(module, state, path, profile):
     """
     Function that checks to see if specified profile
     exists in current IBM WebSphere cell.
@@ -163,14 +169,15 @@ def check_accountExistance(module, path, profile):
     check_profile_cmd = "%s/bin/manageprofiles.sh -listProfiles" % (path)
     profile_check = module.run_command(check_profile_cmd, use_unsafe_shell=True)
 
-    if profile in profile_check[1]:
-        module.exit_json(">>>>>>>> Profile %s already exists in cell <<<<<<<<" 
-                %(profile),
-        changed=False)
-    else:
+    if profile in profile_check[1] and state == 'present':
         module.exit_json(
-                msg=">>>>>>>> Profile %s doesn't exist in cell <<<<<<<<" % (profile),
-                changed=False
+            msg = ">>>>>>>> Profile %s already exists in cell <<<<<<<<" %(profile),
+        changed=False)
+
+    if profile not in profile_check[1] and state == 'absent':
+        module.exit_json(
+            msg = ">>>>>>>> Profile %s does not exist in cell <<<<<<<<"%(profile),
+            changed=False
         )
 
 
@@ -180,17 +187,18 @@ def remove_account(module, path, profile):
     if it is present
     """
 
-    remove_account_cmd = "%s/bin/manageprofiles.sh -delete %s"
+    remove_account_cmd = "{0}/bin/manageprofiles.sh -delete -profileName {1}".format(path, profile)
     account_remove = module.run_command(remove_account_cmd, use_unsafe_shell=True)
 
     if account_remove[0] != 0:
         module.fail_json(
-                msg=">>>>>>>> Profile: %s failed to delete. <<<<<<<<" % (profile),
+                msg=">>>>>>>> Profile: {0} failed to delete. <<<<<<<<".format(profile),
                 changed=False,
-                account_remove[2]
+                stderr=account_remove[2],
+                stdout=account_remove[1]
         )
     module.exit_json(
-            msg=">>>>>>>> Successfully deleted profile: %s <<<<<<<<" % (profile),
+            msg=">>>>>>>> Successfully deleted profile: {0} <<<<<<<<".format(profile),
             changed=True
     )
 
@@ -250,23 +258,26 @@ def main():
                 admin_password=dict(type='str', required=False),
                 cell_name=dict(type='str', required=False, defaults=None),
                 dmgr_host=dict(type='str', required=False),
+                path=dict(type='str', required=True),
                 profile=dict(type='str', required=True),
                 profile_path=dict(type='str', required=True),
-                profile_type=dict(type='str', required=True, choices=['management', 'custom']),
-                security=dict(type='bol', required=True),
-                state=dict(type='str', required=True choices=['absent', 'augment', '
-                    backup', 'present' 'restore'])
+                profile_type=dict(type='str', required=False, choices=['management', 'custom']),
+                security=dict(type='str', required=True, choices=['enabled','disabled'], defaults='enabled'),
+                state=dict(type='str', required=True, choices=['absent', 'augment',
+                    'backup', 'present', 'restore'])
             ),
-            support_check_mode = True,
+            supports_check_mode = True,
             required_if=[
                 ["security",True, ["admin_user", "admin_password"],
-                ["security",True, ["profile_type", "management"]]]
+                ["security",True, ["profile_type", "management"],
+                ["profie_type", ["state", "present"]]]]]
     )
 
     admin_user = module.params['admin_user']
     admin_password = module.params['admin_password']
     cell_name = module.params['cell_name']
     dmgr_host = module.params['dmgr_host']
+    path = module.params['path']
     profile = module.params['profile']
     profile_path = module.params['profile_path']
     profile_type = module.params['profile_type']
@@ -274,48 +285,49 @@ def main():
     state = module.params['state']
 
 
-    if profile_type == 'management' and state == 'present':
-        check_accountExistance(module, path, profile)  
-        make_managerProfile(module, admin_user, admin_password, cell_name, path, profile_path, security)
-    if profile_type == 'custom' and state == 'present':
-        check_accountExistance(module, path, profile) k
+    if profile_type == 'management' and state == 'present' and not module.check_mode:
+        check_accountExistance(module, state, path, profile)  
+        make_managerProfile(module, admin_user, admin_password, cell_name, path, profile, profile_path, security)
+    if profile_type == 'custom' and state == 'present' and not module.check_mode:
+        check_accountExistance(module, state, path, profile)
         make_customProfile(module, admin_user, admin_password, dmgr_host, profile, profile_path)
-    if state == 'absent':
-        check_accountExistance(module, path, profile) k
+    if state == 'absent' and not module.check_mode:
+        check_accountExistance(module, state, path, profile)
         remove_account(module, path, profile)
-    if state == 'backup':
-        check_accountExistance(module, path, profile) k
+    if state == 'backup' and not module.check_mode:
+        check_accountExistance(module, state, path, profile)
         backup_profile(module, admin_user, admin_password, dest, profile, prifle_path)
-    if state == 'restore':
-        check_accountExistance(module, path, profile) k
+    if state == 'restore' and not module.check_mode:
+        check_accountExistance(module, state, path, profile)
         backup_profile(module, admin_user, admin_password, dest, profile, profile_path)
 
 
     if module.check_mode:
-        if profile_type == 'management' or 'custom':
-            check_accountExistance(module, path, profile) k
+        if (profile_type == 'management') or (profile_type == 'custom'):
+            check_accountExistance(module, state, path, profile)
             module.exit_json(
                 msg=">>>>>>>> Profile %s will be created on run <<<<<<<<" %(profile),
                 changed=True
             )
         if state == 'absent':
-            check_accountExistance(module, path, profile) k
+            check_accountExistance(module, state, path, profile)
             module.exit_json(
                     msg=">>>>>>>> Profile: %s will be removed <<<<<<<<" %(profile),
                     changed=True
             )
         if state == 'restore':
-            check_accountExistance(module, path, profile) k
+            check_accountExistance(module, state, path, profile)
             module.exit_json(
                     msg=">>>>>>>> Profile: %s will be restored <<<<<<<<" %(profile),
                     changed=True
             )
         if state == 'backup':
-            check_accountExistance(module, path, profile) k
+            check_accountExistance(module, state, path, profile)
             module.exit_json(
                     msg=">>>>>>>> Profile: %s will be backed up <<<<<<<<" %(profile),
                     changed=True
-
+            )
 
 if __name__ == '__main__':
     main()
+
