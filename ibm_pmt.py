@@ -36,6 +36,13 @@ options:
             - Password to be used with admin account
         required: false
         required_if: security is true
+    dest:
+        description:
+            - Path to for location of profile backup.
+            - If no path is specified, defaults to
+            - profile_path/config/backups/ directory
+        required: false
+        required_if: state is backup or restore
     dmgr_host:
         description:
             - HostName or IP Address of server where deployment manager resides
@@ -85,6 +92,20 @@ EXAMPLES = '''
     profile_path: /opt/IBM/WebSphere/AppServer/profiles/Custom01
     profile: Custom01
     profile_type: custom
+- name: backup profile
+  ibm_pmt:
+    state: backup
+    admin_user: wsadmin
+    admin_passwd: admin123
+    profile_path: /opt/WebSphere/AppServer/profiles/Custom01
+    dest: /tmp/Custom01_backup.zip
+- name: restore profile
+  ibm_pmt:
+    state: restore
+    admin_user: wsadmin
+    admin_password: admin123
+    profile_path:/opt/WebSphere/AppServer/profiles/Custom01
+    dest: /tmp/Custom01_backup.sip
 '''
     
 
@@ -124,13 +145,13 @@ cell_name, security, profile_path, profile)
 
     if mngr_acct_create[0] != 0:
         module.fail_json(
-            msg=">>>>>>>> Failed to create account: {0}. Review errors and try again. CMD:  {1} RC: {2} <<<<<<<<".format(profile, create_dmgr_account, mngr_acct_create[0]),
+            msg=">>>>>>>> Failed to create account: {0}. Review errors and try again.<<<<<<<<".format(profile)
             changed=False,
             stderr=mngr_acct_create[2],
             stdout=mngr_acct_create[1]
         )
     module.exit_json(
-        msg=">>>>>>>> Succesfully created account %s <<<<<<<<" % (profile),
+        msg=">>>>>>>> Succesfully created account {0} <<<<<<<<".format(profile)
         changed=True
     )
 
@@ -141,21 +162,21 @@ def make_customProfile(module, admin_user, admin_password, dmgr_host,
     Function that creates a custom profile for a IBM Websphere ND Cell
     """
 
-    create_custom_profile = "%s/bin/manaeprofiles.sh - create \
--templatePath %s/profileTemplates/managed/ \
--dmgrAdminUserName %s -dmgrAdminPassword %s \
--profileRoot %s -profileName %s -dmgrHost %s" % (path, path, admin_user, admin_password,
+    create_custom_profile = "{0}/bin/manaeprofiles.sh - create \
+-templatePath {0}/profileTemplates/managed/ \
+-dmgrAdminUserName {1} -dmgrAdminPassword {2} \
+-profileRoot {3} -profileName {4} -dmgrHost {5}".format(path,admin_user, admin_password,
 profile_path, profile, dmgr_host)
 
     cstm_account_create = module.run_command(create_custom_profile, use_unsafe_shell=True)
     if cstm_account_create[0] != 0:
         module.fail_json(
-                msg=">>>>>>>> Failed to create account %s <<<<<<<<" %(profile),
+                msg=">>>>>>>> Failed to create account {0} <<<<<<<<".format(profile)
                 changed=False,
                 stderr=cstm_account_create[2]
         )
     module.exit_json(
-            msg=">>>>>>>> Successfully created account %s <<<<<<<<" %(profile),
+            msg=">>>>>>>> Successfully created account {0} <<<<<<<<".format(profile),
             changed=True
     )
 
@@ -166,17 +187,17 @@ def check_accountExistance(module, state, path, profile):
     exists in current IBM WebSphere cell.
     """
 
-    check_profile_cmd = "%s/bin/manageprofiles.sh -listProfiles" % (path)
+    check_profile_cmd = "{0}/bin/manageprofiles.sh -listProfiles".format(path)
     profile_check = module.run_command(check_profile_cmd, use_unsafe_shell=True)
 
     if profile in profile_check[1] and state == 'present':
         module.exit_json(
-            msg = ">>>>>>>> Profile %s already exists in cell <<<<<<<<" %(profile),
+            msg = ">>>>>>>> Profile {0} already exists in cell <<<<<<<<".format(profile),
         changed=False)
 
     if profile not in profile_check[1] and state == 'absent':
         module.exit_json(
-            msg = ">>>>>>>> Profile %s does not exist in cell <<<<<<<<"%(profile),
+            msg = ">>>>>>>> Profile {0} does not exist in cell <<<<<<<<".format(profile),
             changed=False
         )
 
@@ -210,19 +231,19 @@ def backup_profile(module, admin_user, admin_password, dest, profile,
     """
 
 
-    backup_profile_cmd = "%s/bin/backupConfig.sh / %s/%s_backup_%s.zip \
-            -user %s -password %s -profileName %s" % (profile_path,
-            dest, profile, date, admin_user, admin_password, profile)
+    backup_profile_cmd = "{0}/bin/backupConfig.sh / {1}/{2}_backup.zip \
+            -user {3} -password {4} -profileName {5}".format(profile_path,
+            dest, profile, admin_user, admin_password, profile)
     backup_profile = module.run_command(backup_profile_cmd, use_unsafe_shell=True)
 
     if backup_profile[0] != 0:
         module.fail_json(
-                msg=">>>>>>>> Failed to backup profile: %s  <<<<<<<<" % (profile),
+                msg=">>>>>>>> Failed to backup profile: {0}  <<<<<<<<".format(profile),
                 changed=False,
                 stderr=backup_profile[2]
         )
     module.exit_json(
-            msg=">>>>>>>> Successfully backed up profile: %s in /tmp/ <<<<<<<<" % (profile),
+            msg=">>>>>>>> Successfully backed up profile: {0} in /tmp/ <<<<<<<<".format(profile),
             changed=True
     )
 
@@ -233,19 +254,19 @@ def restore_profile(module, admin_user, admin_password, dest, profile,
     Function that will restore a backup profile archive
     """
 
-    restore_profile_cmd = "%s/bin/restoreConfig.sh %s/%s_backup_%s.zip \
-            -user %s -password %s -profileName %s" %(profile_path, dest,
-                    profile, date, admin_user, admin_password, profile)
+    restore_profile_cmd = "{0}/bin/restoreConfig.sh {1}/{2}_backup.zip \
+            -user {3} -password {4} -profileName {5}".format(profile_path, dest,
+                    profile, admin_user, admin_password, profile)
     restore_profile = module.run_command(restore_profile_cmd, use_unsafe_shell=True)
 
     if restore_profile[0] != 0:
         module.fail_json(
-                msg=">>>>>>>> Failed to restore profile: %s <<<<<<<<" %(profile),
+                msg=">>>>>>>> Failed to restore profile: {0} <<<<<<<<".format(profile),
                 changed=False,
                 stderr=restore_profile[2]
         )
     module.exit_json(
-            msg=">>>>>>>> Succesfully restored profile %s <<<<<<<<" %(profile),
+            msg=">>>>>>>> Succesfully restored profile {0} <<<<<<<<".format(profile),
             changed=True
     )
 
@@ -306,25 +327,25 @@ def main():
         if (profile_type == 'management') or (profile_type == 'custom'):
             check_accountExistance(module, state, path, profile)
             module.exit_json(
-                msg=">>>>>>>> Profile %s will be created on run <<<<<<<<" %(profile),
+                msg=">>>>>>>> Profile {0} will be created on run <<<<<<<<".format(profile),
                 changed=True
             )
         if state == 'absent':
             check_accountExistance(module, state, path, profile)
             module.exit_json(
-                    msg=">>>>>>>> Profile: %s will be removed <<<<<<<<" %(profile),
+                    msg=">>>>>>>> Profile: {0} will be removed <<<<<<<<".format(profile),
                     changed=True
             )
         if state == 'restore':
             check_accountExistance(module, state, path, profile)
             module.exit_json(
-                    msg=">>>>>>>> Profile: %s will be restored <<<<<<<<" %(profile),
+                    msg=">>>>>>>> Profile: {0} will be restored <<<<<<<<".format(profile),
                     changed=True
             )
         if state == 'backup':
             check_accountExistance(module, state, path, profile)
             module.exit_json(
-                    msg=">>>>>>>> Profile: %s will be backed up <<<<<<<<" %(profile),
+                    msg=">>>>>>>> Profile: {0} will be backed up <<<<<<<<".format(profile),
                     changed=True
             )
 
