@@ -109,37 +109,39 @@ EXAMPLES = '''
 '''
     
 
-def make_managerProfile(module, admin_user, admin_password, cell_name, 
-        path, profile, profile_path, security):
+def make_managerProfile(module):
     """
     Function that creates an Deployment manager profile
     for IBM WebSphere ND installations.
     """
 
-    if security == 'enabled':
-        security = 'true'
+    if module.params['security'] == 'enabled':
+        module.params['security'] = 'true'
     else:
-       security = 'false'
+       module.params['security'] = 'false'
 
-    if cell_name is not None:
+    if module.params['cell_name'] is not None:
         create_dmgr_account = """{0}/bin/manageprofiles.sh -create -templatePath \
 {0}/profileTemplates/management/ -adminUserName {1} -adminPassword {2} \
 -cellName {3} -enableAdminSecurity {4} -profileRoot {5} \
 -personalCertValidityPeriod 15 \
 -serverType DEPLOYMENT_MANAGER -signingCertValidityPeriod 20 \
--profileName {6}""".format(path, admin_user, admin_password,
-cell_name, security, profile_path, profile)
+-profileName {6}""".format(module.params['path'], module.params['admin_user'], 
+        module.params['admin_password'],module.params['cell_name'],
+        module.params['security'], ,module.params['profile_path'], 
+        module.paramsp['profile'])
 
         mngr_acct_create = module.run_command(create_dmgr_account, use_unsafe_shell=True)
 
 
-    if cell_name is None:
+    if module.params['cell_name'] is None:
         create_dmgr_account = """{0}/bin/manageprofiles.sh -create -templatePath \
 {0}/profileTemplates/management/ -adminUserName {1} -adminPassword {2} \
 -enableAdminSecurity {3} -profileRoot {4} -personalCertValidityPeriod 15 \
 -serverType DEPLOYMENT_MANAGER -signingCertValidityPeriod 20 \
--profileName {5}""".format(path, admin_user, admin_password,
-                security, profile_path, profile)
+-profileName {5}""".format(module.params['path'], module.parmas['admin_user'], 
+        module.params['admin_password,'], module.params['security'],
+        module.params['profile_path'], module.params['profile'])
 
         mngr_acct_create = module.run_command(create_dmgr_account, use_unsafe_shell=True)
 
