@@ -39,15 +39,15 @@ options:
     dest:
         description:
             - Path to for location of profile backup.
-            - If no path is specified, defaults to
-            - profile_path/config/backups/ directory
+            - If no module.params[path] is specified, defaults to
+            - profile_module.params[path]/config/backups/ directory
         required: false
         required_if: state is backup or restore
     dmgr_host:
         description:
             - HostName or IP Address of server where deployment manager resides
         required: false
-    path:
+    module.params[path]:
         description:
             - Path of IBM Install root. E.g /opt/IBM/WebSphere/AppServer.
         required: true
@@ -55,7 +55,7 @@ options:
         description:
             - The name of the profile that will be created
         required: true
-    profile_path:
+    profile_module.params[path]:
         description:
             - Path of newly created profile. E.g /opt/IBM/WebSphere/AppServer/profiles/Custom01
         required: true
@@ -78,9 +78,9 @@ EXAMPLES = '''
     state: present
     admin_user: MyAdmin
     admin_password: MyPassword
-    path: /opt/IBM/WebSphere/AppServer
+    module.params[path]: /opt/IBM/WebSphere/AppServer
     profile: DeploymenManager
-    profile_path: /opt/IBM/WebSphere/AppServer/profiles/DeploymentManager
+    profile_module.params[path]: /opt/IBM/WebSphere/AppServer/profiles/DeploymentManager
     security: True
     profile_type: management
 - name: create custom profile
@@ -88,8 +88,8 @@ EXAMPLES = '''
     state: present
     admin_user: MyAdmin
     admin_password: MyPassword
-    path: /opt/IBM/WebSphere/AppServer
-    profile_path: /opt/IBM/WebSphere/AppServer/profiles/Custom01
+    module.params[path]: /opt/IBM/WebSphere/AppServer
+    profile_module.params[path]: /opt/IBM/WebSphere/AppServer/profiles/Custom01
     profile: Custom01
     profile_type: custom
 - name: backup profile
@@ -97,14 +97,14 @@ EXAMPLES = '''
     state: backup
     admin_user: wsadmin
     admin_passwd: admin123
-    profile_path: /opt/WebSphere/AppServer/profiles/Custom01
+    profile_module.params[path]: /opt/WebSphere/AppServer/profiles/Custom01
     dest: /tmp/Custom01_backup.zip
 - name: restore profile
   ibm_pmt:
     state: restore
     admin_user: wsadmin
     admin_password: admin123
-    profile_path:/opt/WebSphere/AppServer/profiles/Custom01
+    profile_module.params[path]:/opt/WebSphere/AppServer/profiles/Custom01
     dest: /tmp/Custom01_backup.sip
 '''
     
@@ -126,10 +126,10 @@ def make_managerProfile(module):
 -cellName {3} -enableAdminSecurity {4} -profileRoot {5} \
 -personalCertValidityPeriod 15 \
 -serverType DEPLOYMENT_MANAGER -signingCertValidityPeriod 20 \
--profileName {6}""".format(module.params['path'], module.params['admin_user'], 
+-profileName {6}""".format(module.params['module.params[path]'], module.params['admin_user'], 
         module.params['admin_password'],module.params['cell_name'],
-        module.params['security'], ,module.params['profile_path'], 
-        module.paramsp['profile'])
+        module.params['security'], ,module.params['profile_module.params[path]'], 
+        module.params["path"]['profile'])
 
         mngr_acct_create = module.run_command(create_dmgr_account, use_unsafe_shell=True)
 
@@ -139,9 +139,9 @@ def make_managerProfile(module):
 {0}/profileTemplates/management/ -adminUserName {1} -adminPassword {2} \
 -enableAdminSecurity {3} -profileRoot {4} -personalCertValidityPeriod 15 \
 -serverType DEPLOYMENT_MANAGER -signingCertValidityPeriod 20 \
--profileName {5}""".format(module.params['path'], module.parmas['admin_user'], 
+-profileName {5}""".format(module.params['module.params[path]'], module.parmas['admin_user'], 
         module.params['admin_password,'], module.params['security'],
-        module.params['profile_path'], module.params['profile'])
+        module.params['profile_module.params[path]'], module.params['profile'])
 
         mngr_acct_create = module.run_command(create_dmgr_account, use_unsafe_shell=True)
 
@@ -158,8 +158,7 @@ def make_managerProfile(module):
     )
 
 
-def make_customProfile(module, admin_user, admin_password, dmgr_host,
-        profile, profile_path):
+def make_customProfile(module):
     """
     Function that creates a custom profile for a IBM Websphere ND Cell
     """
@@ -167,8 +166,8 @@ def make_customProfile(module, admin_user, admin_password, dmgr_host,
     create_custom_profile = "{0}/bin/manaeprofiles.sh - create \
 -templatePath {0}/profileTemplates/managed/ \
 -dmgrAdminUserName {1} -dmgrAdminPassword {2} \
--profileRoot {3} -profileName {4} -dmgrHost {5}".format(path,admin_user, admin_password,
-profile_path, profile, dmgr_host)
+-profileRoot {3} -profileName {4} -dmgrHost {5}".format(module.params['path'],admin_user, admin_password,
+profile_module.params['path'], profile, dmgr_host)
 
     cstm_account_create = module.run_command(create_custom_profile, use_unsafe_shell=True)
     if cstm_account_create[0] != 0:
@@ -183,13 +182,13 @@ profile_path, profile, dmgr_host)
     )
 
 
-def check_accountExistance(module, state, path, profile):
+def check_accountExistance(module, state, module.params['path'], profile):
     """
     Function that checks to see if specified profile
     exists in current IBM WebSphere cell.
     """
 
-    check_profile_cmd = "{0}/bin/manageprofiles.sh -listProfiles".format(path)
+    check_profile_cmd = "{0}/bin/manageprofiles.sh -listProfiles".format(module.params['path'])
     profile_check = module.run_command(check_profile_cmd, use_unsafe_shell=True)
 
     if profile in profile_check[1] and state == 'present':
@@ -204,13 +203,13 @@ def check_accountExistance(module, state, path, profile):
         )
 
 
-def remove_account(module, path, profile):
+def remove_account(module, module.params['path'], profile):
     """
     Function that will remove an account from the cell
     if it is present
     """
 
-    remove_account_cmd = "{0}/bin/manageprofiles.sh -delete -profileName {1}".format(path, profile)
+    remove_account_cmd = "{0}/bin/manageprofiles.sh -delete -profileName {1}".format(module.params['path'], profile)
     account_remove = module.run_command(remove_account_cmd, use_unsafe_shell=True)
 
     if account_remove[0] != 0:
@@ -227,14 +226,14 @@ def remove_account(module, path, profile):
 
 
 def backup_profile(module, admin_user, admin_password, dest, profile,
-        profile_path):
+        profile_module.params['path']):
     """
     Function that will backup any given WAS profile
     """
 
 
     backup_profile_cmd = "{0}/bin/backupConfig.sh / {1}/{2}_backup.zip \
-            -user {3} -password {4} -profileName {5}".format(profile_path,
+            -user {3} -password {4} -profileName {5}".format(profile_module.params['path'],
             dest, profile, admin_user, admin_password, profile)
     backup_profile = module.run_command(backup_profile_cmd, use_unsafe_shell=True)
 
@@ -251,13 +250,14 @@ def backup_profile(module, admin_user, admin_password, dest, profile,
 
 
 def restore_profile(module, admin_user, admin_password, dest, profile,
-        profile_path):
+        profile_module.params['path']):
+
     """
     Function that will restore a backup profile archive
     """
 
     restore_profile_cmd = "{0}/bin/restoreConfig.sh {1}/{2}_backup.zip \
-            -user {3} -password {4} -profileName {5}".format(profile_path, dest,
+            -user {3} -password {4} -profileName {5}".format(profile_module.params['path'], dest,
                     profile, admin_user, admin_password, profile)
     restore_profile = module.run_command(restore_profile_cmd, use_unsafe_shell=True)
 
@@ -281,9 +281,9 @@ def main():
                 admin_password=dict(type='str', required=False),
                 cell_name=dict(type='str', required=False, defaults=None),
                 dmgr_host=dict(type='str', required=False),
-                path=dict(type='str', required=True),
+                module.params['path']=dict(type='str', required=True),
                 profile=dict(type='str', required=True),
-                profile_path=dict(type='str', required=True),
+                profile_path]=dict(type='str', required=True),
                 profile_type=dict(type='str', required=False, choices=['management', 'custom']),
                 security=dict(type='str', required=True, choices=['enabled','disabled'], defaults='enabled'),
                 state=dict(type='str', required=True, choices=['absent', 'augment',
@@ -302,50 +302,50 @@ def main():
     dmgr_host = module.params['dmgr_host']
     path = module.params['path']
     profile = module.params['profile']
-    profile_path = module.params['profile_path']
+    profile_path = module.params['path']
     profile_type = module.params['profile_type']
     security = module.params['security']
     state = module.params['state']
 
 
     if profile_type == 'management' and state == 'present' and not module.check_mode:
-        check_accountExistance(module, state, path, profile)  
-        make_managerProfile(module, admin_user, admin_password, cell_name, path, profile, profile_path, security)
+        check_accountExistance(module, state, module.params[path], profile)  
+        make_managerProfile(module)
     if profile_type == 'custom' and state == 'present' and not module.check_mode:
-        check_accountExistance(module, state, path, profile)
-        make_customProfile(module, admin_user, admin_password, dmgr_host, profile, profile_path)
+        check_accountExistance(module, state, module.params[path], profile)
+        make_customProfile(module)
     if state == 'absent' and not module.check_mode:
-        check_accountExistance(module, state, path, profile)
-        remove_account(module, path, profile)
+        check_accountExistance(module, state, module.params[path], profile)
+        remove_account(module, module.params[path], profile)
     if state == 'backup' and not module.check_mode:
-        check_accountExistance(module, state, path, profile)
-        backup_profile(module, admin_user, admin_password, dest, profile, prifle_path)
+        check_accountExistance(module, state, module.params[path], profile)
+        backup_profile(module, admin_user, admin_password, dest, profile, prifle_module.params[path])
     if state == 'restore' and not module.check_mode:
-        check_accountExistance(module, state, path, profile)
-        backup_profile(module, admin_user, admin_password, dest, profile, profile_path)
+        check_accountExistance(module, state, module.params[path], profile)
+        backup_profile(module, admin_user, admin_password, dest, profile, profile_module.params[path])
 
 
     if module.check_mode:
         if (profile_type == 'management') or (profile_type == 'custom'):
-            check_accountExistance(module, state, path, profile)
+            check_accountExistance(module, state, module.params[path], profile)
             module.exit_json(
                 msg=">>>>>>>> Profile {0} will be created on run <<<<<<<<".format(profile),
                 changed=True
             )
         if state == 'absent':
-            check_accountExistance(module, state, path, profile)
+            check_accountExistance(module, state, module.params[path], profile)
             module.exit_json(
                     msg=">>>>>>>> Profile: {0} will be removed <<<<<<<<".format(profile),
                     changed=True
             )
         if state == 'restore':
-            check_accountExistance(module, state, path, profile)
+            check_accountExistance(module, state, module.params[path], profile)
             module.exit_json(
                     msg=">>>>>>>> Profile: {0} will be restored <<<<<<<<".format(profile),
                     changed=True
             )
         if state == 'backup':
-            check_accountExistance(module, state, path, profile)
+            check_accountExistance(module, state, module.params[path], profile)
             module.exit_json(
                     msg=">>>>>>>> Profile: {0} will be backed up <<<<<<<<".format(profile),
                     changed=True
