@@ -44,6 +44,12 @@ options:
         description:
             - Path that leads to imcl tool for installing packages.
         required: true
+    properties:
+        description:
+            - Additonal properties to use during product install.
+            - For example, in order to install IHS you will need to use
+            - use user.ihs.allowNonRootSilentInstall=true,user.ihs.httpPort=8080
+        required: false
     name:
         description:
             - Name of package to be installed, updated, or removed from any given cell.
@@ -78,6 +84,19 @@ EXAMPLES = '''
     state: update
     path: /opt/IBM/InstallationManager/eclipse/tools/imcl
     name: com.ibm.websphere.ND.v85_8.5.5013.20180112_1418
+- name: INSTALL IBM IHS WITH PROPERTIES
+  ibm_imcl:
+    state: present
+    path: /opt/IBM/InstallationManager/eclipse/tools/imcl
+    dest: /opt/IBM/WebSphere/HTTPServer
+    name: com.ibm.websphere.IHS.v85_8.5.5000.20130514_1044
+    src: /tmp/IHS-Binaries/
+    properties: user.ihs.allowNonRootSilentInstall=true,user.ihs.httpPort=8080
+- name: ROLLBACK LATEST FIXPACK
+  ibm_imcl:
+    state: rollback
+    name: com.ibm.websphere.ND.v85_8.5.5013.20180112_1418
+    path: /opt/IBM/InstallationManager/eclipse/tools/imcl
 '''
 
 RETURN = '''
@@ -99,7 +118,7 @@ message:
 '''
 
 
-def install_package(module,path,src,shared_resource,dest,name,properties):
+def install_package_local(module,path,src,shared_resource,dest,name,properties):
     """Function that takes care of installing new packages into the target environment."""
 
     if properties is None:
@@ -123,6 +142,45 @@ def install_package(module,path,src,shared_resource,dest,name,properties):
     module.exit_json(
         msg="Succesfully installed package: %s to location: %s. For installation details please see log in /tmp/. "
             % (name, dest),
+        changed=True
+    )
+
+
+def install_package_remote(module):
+    """
+    Function that will install packages
+    from a remote ibm repo
+    """
+
+    if properties is None:
+        rpackage_install_cmd = """{0}/ -repositories {1} -installationDirectory {2} \
+                -log /tmp/IBM_install.log -sharedResourcesDirectory {3} \
+                install {4} -secureStorageFile {5} -masterPasswordFile {6} \
+                -acceptLicense""".format(module.params['path'],module.params['src'],
+                        module.params['dest'],module.params['shared_resources'],
+                        module.params['name'],module.params['secure_storage'],
+                        module.params['passwor_file'])
+        rpackage_install = module.run_command(rpackage_install_cmd, use_unsafe_shell=True)
+
+    if properties is not None:
+        rpackage_install_cmd = """{0}/ -repositories {1} -installationDirectory {2} \
+                -log /tmp/IBM_install.log -sharedResourcesDirectory {3} \
+                install {4} -secureStorageFile {5} -masterPasswordFile {6} \
+                -acceptLicense -properties {7}""".format(module.params['path'],module.params['src'],
+                        module.params['dest'],module.params['shared_resources'],
+                        module.params['name'],module.params['secure_storage'],
+                        module.params['passwor_file'],module.params['properties'])
+        rpackage_install = module.run_command(rpackage_install_cmd, use_unsafe_shell=True)
+
+    if rpackage_install[0] != 0:
+        module.fail_json(
+            msg="Failed to install package(s) {0}".format(module.params['name']),
+            changed=False,
+            stderr=rpackage_install[2],
+            stdout=rpackage_install[1]
+        )
+    module.exit_json(
+        msg="Successfully installed package(s) {0}".format(module.params['name']),
         changed=True
     )
 
@@ -187,7 +245,7 @@ def package_check(module,path,name):
     """
 
     check_package = module.run_command(path + " listInstalledPackages", use_unsafe_shell=True)
- 
+
     name = name.split()
     for package in name:
       if package in check_package[1]:
@@ -210,6 +268,8 @@ def main():
             path=dict(type='str', required=True),
             name=dict(type='str', required=False),
             shared_resource=dict(type='str', required=False),
+            secure_storage=dict(type='str', required=False, default=None),
+            password_file=dict(type='str', required=False, default=None),
             properties=dict(type='str', required=False, default=None)
         ),
         supports_check_mode = True,
@@ -224,13 +284,17 @@ def main():
     path = module.params['path']
     name = module.params['name']
     shared_resource = module.params['shared_resource']
+    secure_storage = module.params['secure_storage']
+    password_file =  module.params['password_file']
     properties = module.params['properties']
     pckg_check = package_check(module,path,name)
 
 
     if pckg_check != 1:
         if state == 'present' and not module.check_mode:
-            install_package(module,path,src,shared_resource,dest,name,properties)
+            install_package_local(module,path,src,shared_resource,dest,name,properties)
+        if (state == 'present') and (secure_storage is not None) and not (module.check_mode):
+            install_package_remote(module)
         if state == 'update' and not module.check_mode:
             update_package(module,path,src,shared_resource,name)
         if state == 'rollback':
