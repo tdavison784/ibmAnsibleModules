@@ -69,34 +69,34 @@ message:
 
 '''
 
-def install_ibmim(module, src, dest):
+def install_ibmim(module):
     """Function that will install IBM Installation Manager.
     This will only get installed if an installation path with a binary related to the install
     is not located on the server. If the binary is found, install will skip.
     """
 
-    if os.path.exists(dest+"/eclipse/tools/imcl"):
+    if os.path.exists(module.params['dest']+"/eclipse/tools/imcl"):
         module.exit_json(
-            msg="Installation Manager already exists at %s" % (dest),
+            msg="Installation Manager already exists at {0}".format(module.params['dest']),
             changed=False
         )
     else:
-        install_im = module.run_command(src+'/userinstc -acceptLicense -installationDirectory ' +
-                                        dest, use_unsafe_shell=True)
+        install_im = module.run_command(module.params['src']+'/userinstc -acceptLicense -installationDirectory ' +
+                                        module.params['dest'], use_unsafe_shell=True)
 
         if install_im[0] != 0:
             module.fail_json(
-                msg="Failed to install IBM IM at %s" % (dest),
+                msg="Failed to install IBM IM at {0}".format(dest),
                 changed=False,
                 stderr=install_im[2]
             )
         else:
             module.exit_json(
-                msg="Succesfully installed IBM IM at %s" % (dest),
+                msg="Succesfully installed IBM IM at {0}".format(dest),
                 changed=True,
             )
 
-def remove_ibmim(module, src):
+def remove_ibmim(module):
     """Function that will remove IBM IM installation.
     The removal of IBM IM is associated with the installation users home directory.
     The uninstall binaries are located on RHEL/centos: /home/user/var/ibm/InstallationManager/uninstall/ directory.
@@ -104,8 +104,8 @@ def remove_ibmim(module, src):
 
 
     try:
-        if os.path.exists(src):
-            uninstall_im = module.run_command(src+'/uninstallc', use_unsafe_shell=True)
+        if os.path.exists(module.params['src']):
+            uninstall_im = module.run_command(module.params['src']+'/uninstallc', use_unsafe_shell=True)
             if uninstall_im[0] != 0:
                 module.fail_json(
                     msg="Failed to uninstall IBM IM.",
@@ -120,7 +120,7 @@ def remove_ibmim(module, src):
 
         else:
             module.fail_json(
-                msg="The src directory of %s does not appear to exist." % (src),
+                msg="The src directory of {0} does not appear to exist.".format(src),
                 changed=False
             )
     finally:
