@@ -8,66 +8,74 @@ from ansible.module_utils.basic import AnsibleModule
 ANSIBLE_METADATA = {
     'metadata_version': '1.1',
     'status': ['preview'],
-    'supported_by': 'community'
-}
+    'supported_by': 'community'}
 
-DOCUMENTATION='''
+
+DOCUMENTATION = '''
 ---
-module: ihs.py
+module: ibm_ihs
 
-short_description: Module to control IHS service state.
+short_description: Module that controls the state of an IBM Deployment Manager
 
-version_added: 1.0
+version_added: "3.0"
 
 description:
-	- Control IHS service state
+    - Module that controls the state of IBM IHS Web Server.
+    - Module control start and stop state for both adminctl and apachectl.
+    - Support of dry run is provided with this module.
 
 options:
-  state:
-    description:
-      - started, stopped, restarted
-      - will start, stop, or restart adminctl, or apachetcl service
-
-  service:
-    description:
-      - adminctl, apachectl
-      - adminctl is needed to communicate with WAS Dmgr cell
-      - apachectl controls httpd process
-
-author: Tommy Davison <tommy.davison@state.mn.us>
+    state:
+        description:
+            - Describes the state in which to send IBM IHS server.
+        required: true
+        choices:
+          - start
+          - stop
+    path:
+        description:
+            - Path of IBM Install root. E.g /opt/IBM/WebSphere/HTTPServer
+        required: true
+    name:
+        description:
+            - Name of the IHS service to start, stop, or restart.
+        required: true
+        choices:
+          - adminctl
+          - apachectl
+author:
+    - Tom Davison (@tntdavison784)
 '''
 
-EXAMPLES='''
 
-- name: Start Admin Service
-  ibm_ihs:
-    state: start
-    name: adminctl
-    path: /opt/IBM/WebSphere/HTTPServer
-
-- name: STOP ADMIN SERVICE
+EXAMPLES = '''
+- name: Stop apachectl service
   ibm_ihs:
     state: stop
-    name: adminctl
-    path: /opt/IBM/WebSphere/HTTPServer  
-
-- name: START APACHE SERVICE
-  ibm_ihs:
-    state: start
-    name: apachectl
     path: /opt/IBM/WebSphere/HTTPServer
-
-- name: STOP APACHE SERVICE
+    name: apachectl
+- name: Stop adminctl service
   ibm_ihs:
     state: stop
-    name: apachectl
     path: /opt/IBM/WebSphere/HTTPServer
-
-
-- name: Restart HTTP Service
+    name: adminctl
+- name: Restart ihs all services
   ibm_ihs:
-    state: restarted
-    service: apachectl
+    state: restart
+    path: /opt/IBM/WebSphere/HTTPServer
+    name: "{{ item.service }}"
+  loop:
+    - { service: adminctl }
+    - { service: apachectl }
+'''
+
+
+RETURN = '''
+result:
+    description: Descibes changed state or failed state
+    type: str
+message:
+    description: Succesfully sent ihs into desired state
 '''
 
 
