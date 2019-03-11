@@ -122,6 +122,9 @@ def stop_service(module):
     admin_pid = "{0}/logs/admin.pid".format(module.params['path'])
     httpd_pid = "{0}/logs/httpd.pid".format(module.params['path'])
 
+    if module.params['name'] == 'adminctl':
+
+
 
 def stop_apachectl(module, path, name, state):
     """
