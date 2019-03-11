@@ -85,7 +85,7 @@ def start_apachectl(module, path, name, state):
     """
     if os.path.exists("%s/logs/httpd.pid" % (path)):
         module.exit_json(
-                msg=">>>>>>>> httpd service is already running",
+                msg="httpd service is already running",
                 changed=False
         )
     cmd = "%s/bin/%s %s" %(path, name, state)
@@ -98,7 +98,7 @@ def start_apachectl(module, path, name, state):
                 stderr=start_httpd[2]
         )
     module.exit_json(
-            msg=">>>>>>>> successfully sent  %s service into % state<<<<<<<<" % (name, state),
+            msg="Successfully sent  %s service into % state" % (name, state),
             changed=True
     )
 
@@ -110,7 +110,7 @@ def stop_apachectl(module, path, name, state):
     """
     if not os.path.exists("%s/logs/admin.pid" % (path)):
         module.exit_json(
-                msg=">>>>>>>> httpd service is not running <<<<<<<<",
+                msg="httpd service is not running",
                 changed=False
         )
 
@@ -124,7 +124,7 @@ def stop_apachectl(module, path, name, state):
                 stderr=stop_httpd[2]
         )
     module.exit_json(
-            msg=">>>>>>>> successfully sent  %s service into % state<<<<<<<<" % (name, state),
+            msg="Successfully sent  %s service into % state" % (name, state),
             changed=True
     )
 
@@ -140,12 +140,12 @@ def restart_apachectl(module, path, name, state):
 
     if restart_httpd[0] != 0:
         module.fail_json(
-                msg=">>>>>>>> Failed to restart %s service <<<<<<<<" % (name),
+                msg="Failed to restart %s service" % (name),
                 changed=False,
                 stderr=restart_httpd[2]
         )
     module.exit_json(
-            msg=">>>>>>>> Successfully restarted %s service <<<<<<<<" % (name),
+            msg="Successfully restarted %s service" % (name),
             changed=True
     )
 
@@ -158,7 +158,7 @@ def start_adminctl(module, path, name, state):
 
     if os.path.exists("%s/logs/admin.pid" % (path)):
         module.exit_json(
-                msg=">>>>>>>> adminctl service is already running <<<<<<<<",
+                msg="Adminctl service is already running",
                 changed=False
         )
     
@@ -167,12 +167,12 @@ def start_adminctl(module, path, name, state):
 
     if start_admin[0] != 0:
         module.fail_json(
-                msg="failed to send  %s service into %s state. see stderr for more details..." % (name, state),
+                msg="Failed to send  %s service into %s state. see stderr for more details..." % (name, state),
                 changed=False,
                 stderr=start_admin[2]
         )
     module.exit_json(
-            msg=">>>>>>>> successfully sent  %s service into % state<<<<<<<<" % (name, state),
+            msg="Successfully sent  %s service into % state" % (name, state),
             changed=True
     )
 
@@ -185,7 +185,7 @@ def stop_adminctl(module, path, name, state):
 
     if not os.path.exists("%s/logs/admin.pid" % (path)):
         module.exit_json(
-                msg=">>>>>>>> adminctl service is already stopped <<<<<<<<",
+                msg="Adminctl service is already stopped",
                 changed=False
         )
     
@@ -194,12 +194,12 @@ def stop_adminctl(module, path, name, state):
 
     if stop_admin[0] != 0:
         module.fail_json(
-                msg="failed to send  %s service into %s state. see stderr for more details..." % (name, state),
+                msg="Failed to send  %s service into %s state. see stderr for more details." % (name, state),
                 changed=False,
                 stderr=stop_admin[2]
         )
     module.exit_json(
-            msg=">>>>>>>> successfully sent  %s service into % state<<<<<<<<" % (name, state),
+            msg="Successfully sent  %s service into % state" % (name, state),
             changed=True
     )
 
@@ -221,6 +221,24 @@ def restart_adminctl(module, path, name, state):
     module.exit_json(
             msg=">>>>>>>> Successfully restarted %s service <<<<<<<<",
             changed=True
+    )
+
+def restart_service(module):
+    """Function that will restart the given service provided to it."""
+
+    restart_srvc_cmd = """{0}/bin/{1} {2}""".format(module.params['path'],
+                                                    module.params['name'],
+                                                    module.params['state'])
+    restart_service = module.run_command(restart_srvc_cmd)
+
+    if restart_service[0] != 0:
+        module.fail_json(
+            msg="Failed to restart service {0}. See stderr for details.".format(module.params['name']),
+            changed=False
+        )
+    module.exit_json(
+        msg="Sucessfully restarted {0}.".format(module.params['name']),
+        changed=True
     )
 
 
@@ -253,10 +271,7 @@ def main():
             stop_adminctl(module, path, name, state)
 
     if state == 'restart' and not module.check_mode:
-        if name == 'adminctl':
-            restart_adminctl(module, path, name, state)
-        if name == 'apachectl':
-            restart_apachectl(module, path, name, state)
+        restart_service(module)
 
     if module.check_mode:
         if state == 'start':
