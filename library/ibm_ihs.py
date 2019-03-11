@@ -94,12 +94,12 @@ def start_apachectl(module, path, name, state):
     if start_httpd[0] != 0:
         module.fail_json(
                 msg="failed to send  %s service into %s state. see stderr for more details..." % (name, state),
-                changed=false
+                changed=False,
                 stderr=start_httpd[2]
         )
     module.exit_json(
             msg=">>>>>>>> successfully sent  %s service into % state<<<<<<<<" % (name, state),
-            changed=true
+            changed=True
     )
 
 
@@ -120,12 +120,12 @@ def stop_apachectl(module, path, name, state):
     if stop_httpd[0] != 0:
         module.fail_json(
                 msg="failed to send  %s service into %s state. see stderr for more details..." % (name, state),
-                changed=false
+                changed=False,
                 stderr=stop_httpd[2]
         )
     module.exit_json(
             msg=">>>>>>>> successfully sent  %s service into % state<<<<<<<<" % (name, state),
-            changed=true
+            changed=True
     )
 
 
@@ -168,12 +168,12 @@ def start_adminctl(module, path, name, state):
     if start_admin[0] != 0:
         module.fail_json(
                 msg="failed to send  %s service into %s state. see stderr for more details..." % (name, state),
-                changed=false
+                changed=False,
                 stderr=start_admin[2]
         )
     module.exit_json(
             msg=">>>>>>>> successfully sent  %s service into % state<<<<<<<<" % (name, state),
-            changed=true
+            changed=True
     )
 
 
@@ -195,12 +195,12 @@ def stop_adminctl(module, path, name, state):
     if stop_admin[0] != 0:
         module.fail_json(
                 msg="failed to send  %s service into %s state. see stderr for more details..." % (name, state),
-                changed=false
+                changed=False,
                 stderr=stop_admin[2]
         )
     module.exit_json(
             msg=">>>>>>>> successfully sent  %s service into % state<<<<<<<<" % (name, state),
-            changed=true
+            changed=True
     )
 
 
