@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 import os
-import subprocess as sp
 from ansible.module_utils.basic import AnsibleModule
 
 
@@ -79,28 +78,49 @@ message:
 '''
 
 
-def start_apachectl(module, path, name, state):
-    """
-    Function that will start ibm ihs apachectl service
-    """
-    if os.path.exists("%s/logs/httpd.pid" % (path)):
-        module.exit_json(
-                msg="httpd service is already running",
-                changed=False
-        )
-    cmd = "%s/bin/%s %s" %(path, name, state)
-    start_httpd = module.run_command(cmd, use_unsafe_shell=True)
+def start_service(module):
+    """Function that will start either IHS service:
+    adminctl or apachectl if it is not already started.
+    If its started it will pass the module.exit status."""
 
-    if start_httpd[0] != 0:
+    admin_pid = "{0}/logs/admin.pid".format(module.params['path'])
+    httpd_pid = "{0}/logs/httpd.pid".format(module.params['path'])
+
+    start_service_cmd = """{0}/bin/{1} {2}""".format(module.params['path'],
+                                                     module.params['name'],
+                                                     module.params['state'])
+    if module.params['name'] == 'adminctl':
+        if os.path.exists(admin_pid):
+            module.exit_json(
+                msg="Service {0} is already running.".format(module.params['name']),
+                changed=False
+            )
+    if module.params['name'] == 'apachectl':
+        if os.path.exists(httpd_pid):
+            module.exit_json(
+                msg="Service {0} is already running.".format(module.params['name']),
+                changed=False
+            )
+
+    start_ihs_service = module.run_command(start_service_cmd)
+
+    if start_ihs_service[0] != 0:
         module.fail_json(
-                msg="failed to send  %s service into %s state. see stderr for more details..." % (name, state),
-                changed=False,
-                stderr=start_httpd[2]
+            msg="Failed to start service {0}. See stdout/stderr for details.".format(module.params['name']),
+            changed=False,
+            stdout=start_ihs_service[1],
+            stderr=start_ihs_service[2]
         )
-    module.exit_json(
-            msg="Successfully sent  %s service into % state" % (name, state),
-            changed=True
-    )
+
+
+def stop_service(module):
+    """Function that stops given IHS service
+    adminctl or apachectl if found not running.
+    We are only doing an os.exists check for a .pid file
+    association"""
+
+    admin_pid = "{0}/logs/admin.pid".format(module.params['path'])
+    httpd_pid = "{0}/logs/httpd.pid".format(module.params['path'])
 
 
 def stop_apachectl(module, path, name, state):
@@ -128,100 +148,6 @@ def stop_apachectl(module, path, name, state):
             changed=True
     )
 
-
-def restart_apachectl(module, path, name, state):
-
-    """
-    Function that will restart ibm ihs apachectl service
-    """
-
-    cmd = "%s/bin/%s %s" % (path, name, state)
-    restart_httpd = module.run_command(cmd, use_unsafe_shell=True)
-
-    if restart_httpd[0] != 0:
-        module.fail_json(
-                msg="Failed to restart %s service" % (name),
-                changed=False,
-                stderr=restart_httpd[2]
-        )
-    module.exit_json(
-            msg="Successfully restarted %s service" % (name),
-            changed=True
-    )
-
-
-def start_adminctl(module, path, name, state):
-    """
-    Function that will start ibm ihs adminctl service.
-    Will only start if found not running
-    """
-
-    if os.path.exists("%s/logs/admin.pid" % (path)):
-        module.exit_json(
-                msg="Adminctl service is already running",
-                changed=False
-        )
-    
-    cmd = "%s/bin/%s %s" %(path, name, state)
-    start_admin = module.run_command(cmd, use_unsafe_shell=True)
-
-    if start_admin[0] != 0:
-        module.fail_json(
-                msg="Failed to send  %s service into %s state. see stderr for more details..." % (name, state),
-                changed=False,
-                stderr=start_admin[2]
-        )
-    module.exit_json(
-            msg="Successfully sent  %s service into % state" % (name, state),
-            changed=True
-    )
-
-
-def stop_adminctl(module, path, name, state):
-    """
-    Function that will stop ibm ihs adminctl service.
-    Will only stop if found not running.
-    """
-
-    if not os.path.exists("%s/logs/admin.pid" % (path)):
-        module.exit_json(
-                msg="Adminctl service is already stopped",
-                changed=False
-        )
-    
-    cmd = "%s/bin/%s %s" %(path, name, state)
-    stop_admin = module.run_command(cmd, use_unsafe_shell=True)
-
-    if stop_admin[0] != 0:
-        module.fail_json(
-                msg="Failed to send  %s service into %s state. see stderr for more details." % (name, state),
-                changed=False,
-                stderr=stop_admin[2]
-        )
-    module.exit_json(
-            msg="Successfully sent  %s service into % state" % (name, state),
-            changed=True
-    )
-
-
-def restart_adminctl(module, path, name, state):
-    """
-    Function that will restart ibm ihs adminctl service
-    """
-
-    cmd = "%s/bin/%s %s" % (path, name, state)
-    restart_adminctl = module.run_command(cmd, use_unsafe_shell=True)
-
-    if restart_adminctl[0] != 0:
-        module.fail_json(
-                msg=">>>>>>>> Failed to restart %s service <<<<<<<<",
-                changed=False,
-                stderr=restart_adminctl[2]
-        )
-    module.exit_json(
-            msg=">>>>>>>> Successfully restarted %s service <<<<<<<<",
-            changed=True
-    )
 
 def restart_service(module):
     """Function that will restart the given service provided to it."""
