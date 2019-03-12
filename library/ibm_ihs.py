@@ -128,30 +128,30 @@ def main():
     admin_pid = "{0}/logs/admin.pid".format(path)
     httpd_pid = "{0}/logs/httpd.pid".format(path)
 
-    if state is 'start':
-        if name is 'adminctl':
+    if state =='start':
+        if name == 'adminctl':
             if os.path.exists(admin_pid):
                 module.exit_json(
                     msg="Service {0} is already running".format(name),
                     changed=False
                 )
             send_service(module)
-        if name is  'apachectl':
-            if  os.path.exists(httpd_pid):
+        if name == 'apachectl':
+            if os.path.exists(httpd_pid):
                 module.exit_json(
                     msg="Service {0} is already running".format(name),
                     changed=False
                 )
             send_service(module)
-    if state is 'stop':
-        if name  is 'adminctl':
+    if state == 'stop':
+        if name == 'adminctl':
             if not os.path.exists(admin_pid):
                 module.exit_json(
                     msg="Service {0} is already stopped".format(name),
                     changed=False
                 )
             send_service(module)
-        if name is 'apachectl':
+        if name == 'apachectl':
             if not os.path.exists(httpd_pid):
                 module.exit_json(
                     msg="Service {0} is not running".format(name),
