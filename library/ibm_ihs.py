@@ -16,7 +16,7 @@ module: ibm_ihs
 
 short_description: Module that controls the state of an IBM Deployment Manager
 
-version_added: "3.0"
+version_added: "4.0"
 
 description:
     - Module that controls the state of IBM IHS Web Server.
@@ -74,7 +74,7 @@ result:
     description: Descibes changed state or failed state
     type: str
 message:
-    description: Succesfully sent ihs into desired state
+    description: Succesfully sent ihs into desired state.
 '''
 
 
