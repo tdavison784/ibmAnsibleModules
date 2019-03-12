@@ -78,95 +78,29 @@ message:
 '''
 
 
-def start_service(module):
+def send_service(module):
     """Function that will start either IHS service:
     adminctl or apachectl if it is not already started.
     If its started it will pass the module.exit status."""
 
-    admin_pid = "{0}/logs/admin.pid".format(module.params['path'])
-    httpd_pid = "{0}/logs/httpd.pid".format(module.params['path'])
 
-    start_service_cmd = """{0}/bin/{1} {2}""".format(module.params['path'],
+    service_cmd = """{0}/bin/{1} {2}""".format(module.params['path'],
                                                      module.params['name'],
                                                      module.params['state'])
-    if module.params['name'] == 'adminctl':
-        if os.path.exists(admin_pid):
-            module.exit_json(
-                msg="Service {0} is already running.".format(module.params['name']),
-                changed=False
-            )
-    if module.params['name'] == 'apachectl':
-        if os.path.exists(httpd_pid):
-            module.exit_json(
-                msg="Service {0} is already running.".format(module.params['name']),
-                changed=False
-            )
 
-    start_ihs_service = module.run_command(start_service_cmd)
+    run_service = module.run_command(service_cmd)
 
-    if start_ihs_service[0] != 0:
+    if run_service[0] != 0:
         module.fail_json(
-            msg="Failed to start service {0}. See stdout/stderr for details.".format(module.params['name']),
+            msg="Failed to send service {0} into state: {1}. See stdout/stderr for details.".format(module.params['name'],
+                                                                                                    module.params['state']),
             changed=False,
-            stdout=start_ihs_service[1],
-            stderr=start_ihs_service[2]
+            stdout=run_service[1],
+            stderr=run_service[2]
         )
 
-
-def stop_service(module):
-    """Function that stops given IHS service
-    adminctl or apachectl if found not running.
-    We are only doing an os.exists check for a .pid file
-    association"""
-
-    admin_pid = "{0}/logs/admin.pid".format(module.params['path'])
-    httpd_pid = "{0}/logs/httpd.pid".format(module.params['path'])
-
-    if module.params['name'] == 'adminctl':
-
-
-
-def stop_apachectl(module, path, name, state):
-    """
-    Function that will stop ibm ihs apache service
-    will only stop if found running
-    """
-    if not os.path.exists("%s/logs/admin.pid" % (path)):
-        module.exit_json(
-                msg="httpd service is not running",
-                changed=False
-        )
-
-    cmd = "%s/bin/%s %s" %(path, name, state)
-    stop_httpd = module.run_command(cmd, use_unsafe_shell=True)
-
-    if stop_httpd[0] != 0:
-        module.fail_json(
-                msg="failed to send  %s service into %s state. see stderr for more details..." % (name, state),
-                changed=False,
-                stderr=stop_httpd[2]
-        )
     module.exit_json(
-            msg="Successfully sent  %s service into % state" % (name, state),
-            changed=True
-    )
-
-
-def restart_service(module):
-    """Function that will restart the given service provided to it."""
-
-    restart_srvc_cmd = """{0}/bin/{1} {2}""".format(module.params['path'],
-                                                    module.params['name'],
-                                                    module.params['state'])
-    restart_service = module.run_command(restart_srvc_cmd)
-
-    if restart_service[0] != 0:
-        module.fail_json(
-            msg="Failed to restart service {0}. See stderr for details.".format(module.params['name']),
-            changed=False
-        )
-    module.exit_json(
-        msg="Sucessfully restarted {0}.".format(module.params['name']),
+        msg="Successfully sent service: {0} into state: {1}".format(module.params['state']),
         changed=True
     )
 
@@ -187,27 +121,43 @@ def main():
     path = module.params['path']
 
 
-    if state == 'start' and not module.check_mode:
-        if name == 'apachectl':
-            start_apachectl(module, path, name ,state)
-        if name == 'adminctl':
-            start_adminctl(module, path, name, state)
+    admin_pid = "{0}/logs/admin.pid".format(path)
+    httpd_pid = "{0}/logs/httpd.pid".format(path)
 
-    if state == 'stop' and not module.check_mode:
-        if name == 'apachectl':
-            stop_apachectl(module, path, name, state)
-        if name == 'adminctl':
-            stop_adminctl(module, path, name, state)
-
-    if state == 'restart' and not module.check_mode:
-        restart_service(module)
-
+    if state is 'start':
+        if name is 'adminctl':
+            if os.path.exists(admin_pid):
+                module.exit_json(
+                    msg="Service {0} is already running".format(name),
+                    changed=False
+                )
+        if name is  'apachectl':
+            if  os.path.exists(httpd_pid):
+                module.exit_json(
+                    msg="Service {0} is already running".format(name),
+                    changed=False
+                )
+        send_service(module)
+    if state is 'stop':
+        if name  is 'adminctl':
+            if not os.path.exists(admin_pid):
+                module.exit_json(
+                    msg="Service {0} is already stopped".format(name),
+                    changed=False
+                )
+        if name is 'apachectl':
+            if not os.path.exists(httpd_pid):
+                module.exit_json(
+                    msg="Service {0} is not running".format(name),
+                    changed=False
+                )
+        send_service(module)
     if module.check_mode:
         if state == 'start':
             if name == 'adminctl':
-                if os.path.exists("%s/logs/admin.pid" % (path)):
+                if os.path.exists("{0}/logs/admin.pid".format(path)):
                     module.exit_json(
-                            msg=">>>>>>>> adminctl service is already running <<<<<<<<",
+                            msg="Service {0} is already running".format(name),
                             changed=False
                     )
                 else:
@@ -216,9 +166,9 @@ def main():
                             changed=True
                     )
             if name == 'apachectl':
-                if os.path.exits("%s/logs/httpd.pid" % (path)):
+                if os.path.exists("{0}/logs/httpd.pid".format(path)):
                     module.exit_json(
-                            msg=">>>>>>>> apachectl service is already running <<<<<<<<",
+                            msg="Service {0} is already running ",
                             changed=False
                     )
                 else:
@@ -226,12 +176,11 @@ def main():
                             msg=">>>>>>>> apachectl will be sent into start state",
                             changed=True
                     )
-
         if state == 'stop': 
             if name == 'adminctl':
-                if not os.path.exists("%s/logs/admin.pid" % (path)):
+                if not os.path.exists("{0}/logs/admin.pid".format(path)):
                     module.exit_json(
-                            msg=">>>>>>>> adminctl service is already stopped <<<<<<<<",
+                            msg="Service is already stopped",
                             changed=False
                     )
                 else:
@@ -240,14 +189,14 @@ def main():
                             changed=True
                     )
             if name == 'apachectl':
-                if not os.path.exists("%s/logs/httpd.pid" % (path)):
+                if not os.path.exists("{0}/logs/httpd.pid".format(path)):
                     module.exit_json(
-                            msg=">>>>>>>> apachectl service is already stopped <<<<<<<<",
+                            msg="Service is already stopped",
                             changed=False
                     )
                 else:
                     module.exit_json(
-                            msg=">>>>>>>> apachectl will be sent into stop state <<<<<<<<",
+                            msg="Service {0} will be sent into stop state".format(name),
                             changed=True
                     )
         
