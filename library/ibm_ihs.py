@@ -81,9 +81,11 @@ message:
 
 
 def send_service(module):
-    """Function that will start either IHS service:
-    adminctl or apachectl if it is not already started.
-    If its started it will pass the module.exit status."""
+    """Function that will send adminctl or apachectl ihs
+    service into desired state. Function is dynamic and not tied
+    to any state so will run regardless of the state provided.
+    There os lock file checks done in the main function to check service
+    state."""
 
 
     service_cmd = """{0}/bin/{1} {2}""".format(module.params['path'],
