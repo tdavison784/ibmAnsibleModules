@@ -3,10 +3,12 @@
 import os
 from ansible.module_utils.basic import AnsibleModule
 
+
 ANSIBLE_METADATA = {
     'metadata_version': '1.1',
     'status': ['preview'],
     'supported_by': 'community'}
+
 
 DOCUMENTATION = '''
 ---
@@ -43,6 +45,7 @@ author:
     - Tom Davison (@tntdavison784)
 '''
 
+
 EXAMPLES = '''
 - name: Install IBM IM with non standard dest
   ibm_im:
@@ -68,6 +71,7 @@ message:
     description: Succesfully installed or uninstalled IBM IM
 
 '''
+
 
 def install_ibmim(module):
     """Function that will install IBM Installation Manager.
@@ -96,12 +100,12 @@ def install_ibmim(module):
                 changed=True,
             )
 
+
 def remove_ibmim(module):
     """Function that will remove IBM IM installation.
     The removal of IBM IM is associated with the installation users home directory.
     The uninstall binaries are located on RHEL/centos: /home/user/var/ibm/InstallationManager/uninstall/ directory.
     """
-
 
     try:
         if os.path.exists(module.params['src']):
@@ -125,6 +129,7 @@ def remove_ibmim(module):
             )
     finally:
         pass
+
 
 def main():
     """Function that will do all the main logic for the module."""
@@ -170,6 +175,7 @@ def main():
                 msg="Successfully uninstalled IBM IM.",
                 changed=True
             )
+
 
 if __name__ == '__main__':
     main()
