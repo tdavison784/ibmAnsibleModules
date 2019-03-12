@@ -35,6 +35,8 @@ options:
         description:
             - Path of IBM Install root. E.g /opt/IBM/WebSphere/HTTPServer
         required: true
+        default:
+          - /opt/IBM/WebSphere/HTTPServer
     name:
         description:
             - Name of the IHS service to start, stop, or restart.
