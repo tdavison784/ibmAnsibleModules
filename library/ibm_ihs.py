@@ -104,7 +104,8 @@ def send_service(module):
         )
 
     module.exit_json(
-        msg="Successfully sent service: {0} into state: {1}".format(module.params['state']),
+        msg="Successfully sent service: {0} into state: {1}".format(module.params['name'],
+                                                                    module.params['state']),
         changed=True
     )
 
