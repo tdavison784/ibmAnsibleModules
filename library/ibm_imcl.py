@@ -58,8 +58,31 @@ options:
         description:
             - Path to sharedResources directory for Product install. E.g /opt/IBM/IMShared
         required_if: state == 'present' or 'update'
-
-
+    remove_all:
+        description:
+            - Boolean of yes and no to determine whether or not to remove all packages in the cell.
+            - If yes is specified it will remove all packages
+            - If no is specified it will only remove a given package.
+        choices:
+          - yes
+          - no
+        default:
+          - no
+    secure_storage:
+        description:
+            - Path to the secure storage file that contains encrypted passport advantage credentials.
+            - The default path for this file location is /home/user/var/ibm/InstallationManager/secure_storage
+            - This file is NOT present by default, and will need to be created.
+            - More info on this can be found at https://www.ibm.com/support/knowledgecenter/en/SSDV2W_1.7.3/com.ibm.cic.commandline.doc/topics/r_tools_imcl.html
+        required_if: password_file != None
+        default:
+          - None
+    password_file:
+        description:
+            - Password file that contains the master password to un-encrypt the secure_storage credentials.
+        required_if: secure_storage != None
+        default:
+          - None
 author:
     - Tom Davison (@tntdavison784)
 '''
@@ -97,6 +120,16 @@ EXAMPLES = '''
     state: rollback
     name: com.ibm.websphere.ND.v85_8.5.5013.20180112_1418
     path: /opt/IBM/InstallationManager/eclipse/tools/imcl
+- name: INSTALL PACKAGES FROM REMOTE REPO
+  ibm_imcl:
+    state: present
+    path: /opt/IBM/InstallationManager/eclipse/tools/imcl
+    dest: /opt/IBM/WebSphere/AppServer
+    src: http://www.ibm.com/software/repositorymanager/com.ibm.websphere.ND.v85
+    name: com.ibm.websphere.ND.v85_8.5.5000.20130514_1044
+    shared_resource: /opt/IBM/WebSphere/IMShared
+    secure_storage: /home/user/var/ibm/InstallationManager/secure_storage
+    password_file: /tmp/master
 '''
 
 RETURN = '''
@@ -334,7 +367,8 @@ def main():
         supports_check_mode = True,
         required_if=[
             ["state","present", ["dest", "shared_resource"],
-             ["state","update", ["dest", "shared_resource"]]]]
+            ["state","update", ["dest", "shared_resource"],
+            [["secure_storage", "!None", ["password_file"]]]]]]
     )
 
     remove_all = module.params['remove_all']

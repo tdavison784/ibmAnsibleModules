@@ -3,10 +3,12 @@
 import os
 from ansible.module_utils.basic import AnsibleModule
 
+
 ANSIBLE_METADATA = {
     'metadata_version': '1.1',
     'status': ['preview'],
     'supported_by': 'community'}
+
 
 DOCUMENTATION = '''
 ---
@@ -43,6 +45,7 @@ author:
     - Tom Davison (@tntdavison784)
 '''
 
+
 EXAMPLES = '''
 - name: Install IBM IM with non standard dest
   ibm_im:
@@ -69,6 +72,7 @@ message:
 
 '''
 
+
 def install_ibmim(module):
     """Function that will install IBM Installation Manager.
     This will only get installed if an installation path with a binary related to the install
@@ -82,19 +86,20 @@ def install_ibmim(module):
         )
     else:
         install_im = module.run_command(module.params['src']+'/userinstc -acceptLicense -installationDirectory ' +
-                                        module.params['dest'], use_unsafe_shell=True)
+                                        module.params['dest'])
 
         if install_im[0] != 0:
             module.fail_json(
-                msg="Failed to install IBM IM at {0}".format(dest),
+                msg="Failed to install IBM IM at {0}".format(module.params['dest']),
                 changed=False,
                 stderr=install_im[2]
             )
         else:
             module.exit_json(
-                msg="Succesfully installed IBM IM at {0}".format(dest),
+                msg="Successfully installed IBM IM at {0}".format(module.params['dest']),
                 changed=True,
             )
+
 
 def remove_ibmim(module):
     """Function that will remove IBM IM installation.
@@ -102,10 +107,9 @@ def remove_ibmim(module):
     The uninstall binaries are located on RHEL/centos: /home/user/var/ibm/InstallationManager/uninstall/ directory.
     """
 
-
     try:
         if os.path.exists(module.params['src']):
-            uninstall_im = module.run_command(module.params['src']+'/uninstallc', use_unsafe_shell=True)
+            uninstall_im = module.run_command(module.params['src']+'/uninstallc')
             if uninstall_im[0] != 0:
                 module.fail_json(
                     msg="Failed to uninstall IBM IM.",
@@ -114,17 +118,18 @@ def remove_ibmim(module):
                     stderr=uninstall_im[2]
                 )
             module.exit_json(
-                msg="Succesfully uninstalled IBM IM",
+                msg="Successfully uninstalled IBM IM",
                 changed=True
              )
 
         else:
             module.fail_json(
-                msg="The src directory of {0} does not appear to exist.".format(src),
+                msg="The src directory of {0} does not appear to exist.".format(module.params['src']),
                 changed=False
             )
     finally:
         pass
+
 
 def main():
     """Function that will do all the main logic for the module."""
@@ -143,21 +148,21 @@ def main():
     dest = module.params['dest']
 
     if state == 'present' and not module.check_mode:
-        install_ibmim(module, src, dest)
+        install_ibmim(module)
 
     if state == 'absent' and not module.check_mode:
-        remove_ibmim(module, src)
+        remove_ibmim(module)
 
     if module.check_mode:
         if state == 'present':
             if os.path.exists(dest+"/eclipse/tools/imcl"):
                 module.exit_json(
-                    msg="IBM IM is already installed at location %s." % (dest),
+                    msg="IBM IM is already installed at location {0}.".format(dest),
                     changed=False
                 )
             else:
                 module.exit_json(
-                    msg="Sucessfully installed IBM IM at location %s." % (dest),
+                    msg="Successfully installed IBM IM at location {0}.".format(dest),
                     changed=True
                 )
         if state == 'absent' and not os.path.exists(src+"/uninstallc"):
@@ -167,9 +172,10 @@ def main():
             )
         else:
             module.exit_json(
-                msg="Succesfully uninstalled IBM IM.",
+                msg="Successfully uninstalled IBM IM.",
                 changed=True
             )
+
 
 if __name__ == '__main__':
     main()
