@@ -2,7 +2,7 @@
 
 
 import os
-from ansible.module_utils.basic import *
+from ansible.module_utils.basic import AnsibleModule
 
 
 ANSIBLE_METADATA = {
@@ -147,6 +147,7 @@ def check_service(module):
                 )
             deployment_manager(module)
 
+
 def main():
     """
 	Main Module logic.
@@ -170,6 +171,6 @@ def main():
     #Function also takes care of the dry run checks
     check_service(module)
 
+
 if __name__ == "__main__":
     main()
-
