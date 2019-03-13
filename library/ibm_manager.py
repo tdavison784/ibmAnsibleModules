@@ -17,7 +17,7 @@ module: ibm_manager
 
 short_description: Module that controls the state of an IBM Deployment Manager
 
-version_added: "2.0"
+version_added: "3.0"
 
 description:
     - Module that controls the state of IBM Node Deployment Manager.
@@ -72,55 +72,80 @@ message:
 '''
 
 
-def stop_manager(module,path,profile):
-    """Function to send IBM Deployment Manager into a stopped state.
-    This function is idempotent, meaning it will only stop the dmgr profile
-    if it is up and running. Function will do a filesystem check for a .pid file
-    in the WAS_ROOT/profiles/logs/dmgr/ directory. If a .pid file exists, it is assumed
-    that the deployment manager is running.
+def deployment_manager(module):
+    """Function that controls deployment manager state.
+    Available states are: stop, and start. Function only controls
+    the send state of the module. Meaning, that the checks for running
+    service are not done in this module, but rather done in main function.
     """
 
-    if  os.path.exists(path+"/profiles/"+profile+"/logs/dmgr/dmgr.pid"):
-        stop_dmgr  = module.run_command(path+'/profiles/'+profile+'/bin/stopManager.sh', use_unsafe_shell=True)
-        if stop_dmgr[0] != 0:
-            module.fail_json(
-                msg='Failed to send Deployment Manager into %s for profile %s' % (state, profile),
-                changed=False,
-                stderr=start_dmgr[2]
+    manager = "{0}/profiles/{1}/bin/{2}/Manager.sh".format(module.params['path'],
+                                                           module.params['profile'],
+                                                           module.params['state'])
+    run_manager =  module.run_command(manager)
+
+    if  run_manager[0] !=  0:
+        module.fail_json(
+            msg="Failed to send Deployment Manager into state {0}. \
+            See stdout/stderr for details.".format(module.params['state']),
+            changed=False,
+            stdout=run_manager[1],
+            stderr=run_manager[2]
+        )
+    module.exit_json(
+        msg="Successfully sent Deployment Manager into state {0}".format(module.params['state']),
+        changed=True
+    )
+
+
+def check_service(module):
+    """Function that checks the state of deployment manager.
+    If dmgr.pid exists then dmgr is  considered running.
+    if not dmgr.pid then dmgr is considered stopped.
+    Function calls in deployment_manager function after all checks have been made to
+    either start or stop depending on the provided state."""
+
+    dmgr_pid = "{0}/profiles/{1}/logs/dmgr/dmgr.pid".format(module.params['path'],
+                                                            module.params['profile'])
+
+    if module.params['state'] == 'start':
+        if os.path.exists(dmgr_pid):
+            if module.check_mode:
+                module.exit_json(
+                    msg="Deployment Manager already running.",
+                    changed=False
+                )
+            module.exit_json(
+                msg="Deployment Manager already running.",
+                changed=False
             )
-        module.exit_json(
-            msg='Succesfully sent Deployment Manager into % state for profile %s' % (state, profile),
-            changed=True
-        )
-    else:
-        module.exit_json(
-            msg='>>>>>>>> Deployment Manager is not running <<<<<<<<'
-        )
+        else:
+            if module.check_mode:
+                module.exit_json(
+                    msg="Deployment Manager will be started.",
+                    changed=True
+                )
+            deployment_manager(module)
 
 
-def start_manager(module,path,profile):
-    """Function that will send IBM Deployment Manager into a started state.
-    This function is idempotent. Meaning that it will only start the deploymment manager if it is not running.
-    Function does a filesystem check to see if a .pid file exists. If file exits, module will return a OK run call.
-    """
-
-    if not os.path.exists(path+"/profiles/"+profile+"/logs/dmgr/dmgr.pid"):
-        start_dmgr = module.run_command(path+'/profiles/'+profile+'/bin/startManager.sh', use_unsafe_shell=True)
-        if start_dmgr[0] != 0:
-            module.fail_json(
-                msg='Failed to send Deployment Manager %s for profile %s' % (state),
-                changed=False,
-                stderr=start_dmgr[2]
+    if module.params['state'] == 'stop':
+        if not os.path.exists(dmgr_pid):
+            if module.check_mode:
+                module.exit_json(
+                    msg="Deployment Manager already stopped",
+                    changed=False
+                )
+            module.exit_json(
+                msg="Deployment Manager already stopped",
+                changed=False
             )
-        module.exit_json(
-            msg='Succesfully sent Deployment Manager into % state for profile %s' % (state),
-            changed=True
-        )
-    else:
-        module.exit_json(
-            msg='>>>>>>>> Deployment Manager is already running <<<<<<<<'
-        )
-
+        else:
+            if module.check_mode:
+                module.exit_json(
+                    msg="Deployment Manager will be stopped",
+                    changed=True
+                )
+            deployment_manager(module)
 
 def main():
     """
@@ -141,36 +166,9 @@ def main():
     profile = module.params['profile']
     path = module.params['path']
 
-
-    if state == 'start' and not module.check_mode:
-        start_manager(module, path, profile)
-
-    if state == 'stop' and not module.check_mode:
-        stop_manager(module, path, profile)
-
-    if module.check_mode:
-        if state == 'stop':
-            if  os.path.exists(path+"/profiles/"+profile+"/logs/dmgr/dmgr.pid"):
-                module.exit_json(
-                    msg='Sending Deployment Manager into %s' % (state),
-                    changed=True
-                )
-            else:
-                module.exit_json(
-                    msg='Deployment Manager already in a %s state ' %(state),
-                    changed=False
-                )
-        if state == 'start':
-            if  os.path.exists(path+"/profiles/"+profile+"/logs/dmgr/dmgr.pid"):
-                module.exit_json(
-                    msg='Deployment Manager already in a %s state ' %(state),
-                    changed=False
-                )
-            else:
-                module.exit_json(
-                    msg='Sending Deployment Manager into a %s state ' % (state),
-                    changed=True
-                )
+    #check_service function calls in deployment_manager function
+    #Function also takes care of the dry run checks
+    check_service(module)
 
 if __name__ == "__main__":
     main()
