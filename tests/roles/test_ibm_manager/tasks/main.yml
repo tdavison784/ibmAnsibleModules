@@ -1,0 +1,60 @@
+---
+-
+  name: create was root path
+  file:
+    state: directory
+    path: "{{ item.path }}"
+    owner: "{{ user }}"
+    group: "{{ group }}"
+    mode: 0755
+  with_items:
+    - { path: "{{ was_root }}/profiles/{{ profile_name }}/bin" }
+    - { path: "{{ was_root }}/profiles/{{ profile_name }}/logs/dmgr" }
+-
+  name: copy custom files to bin dir
+  copy:
+    src: "files/{{ item.files }}"
+    dest: "{{ was_root }}/profiles/{{ profile_name }}/bin/"
+    owner: "{{ user }}"
+    mode: 0775
+    group: "{{ group }}"
+  with_items:
+    - { files: startManager.sh }
+    - { files: stopManager.sh }
+-
+  name: Send DMGR to state
+  ibm_manager:
+    state: "{{ state }}"
+    path: "{{ was_root }}"
+    profile: "{{ profile_name }}"
+  tags:
+    - Dmgr
+-
+  name: CREATE  DMGR PID
+  when: (state == 'start')
+  file:
+    state: touch
+    path: "{{ was_root }}/profiles/{{ profile_name}}/logs/dmgr/dmgr.pid"
+    mode: 0755
+    owner: "{{  user }}"
+    group: "{{ group }}"
+  tags:
+    - createPid
+-
+  name: DELETE DMGR PID
+  when: (state ==  'stop')
+  file:
+    state: absent
+    path: "{{ was_root }}/profiles/{{ profile_name}}/logs/dmgr/dmgr.pid"
+  tags:
+    - removePid
+-
+  name: delete was root path
+  file:
+    state: absent
+    path: "{{ item.path }}"
+  with_items:
+    - { path: "{{ was_root }}/profiles/{{ profile_name }}/bin" }
+    - { path: "{{ was_root }}/profiles/{{ profile_name }}/logs" }
+  tags:
+    - cleanup
