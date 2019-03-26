@@ -1,0 +1,57 @@
+---
+-
+  name: create was root path
+  file:
+    state: directory
+    path: "{{ item.path }}"
+    owner: "{{ user }}"
+    group: "{{ group }}"
+    mode: 0755
+  with_items:
+    - { path: "{{ was_root }}/profiles/{{ profile_name }}/bin" }
+    - { path: "{{ was_root }}/profiles/{{ profile_name }}/logs/nodeagent" }
+  tags:
+    - setup
+-
+  name: copy custom files to bin dir
+  copy:
+    src: "files/{{ item.files }}"
+    dest: "{{ was_root }}/profiles/{{ profile_name }}/bin/"
+    owner: "{{ user }}"
+    mode: 0775
+    group: "{{ group }}"
+  with_items:
+    - { files: startNode.sh }
+    - { files: stopNode.sh }
+-
+  name: send node to desired state
+  ibm_node:
+    state: "{{ state }}"
+    path: "{{ was_root }}"
+    profile: "{{ profile_name }}"
+  tags:
+    - Node
+-
+  name: create pid if state is start
+  when: (state == 'start')
+  file:
+    state: touch
+    path: "{{ was_root }}/profiles/{{ profile_name }}/logs/nodeagent/nodeagent.pid"
+  tags:
+    - createPid
+-
+  name: delete pid if state is stop
+  when: (state == 'stop')
+  file:
+    state: absent
+    path: "{{ was_root }}/profiles/{{ profile_name }}/logs/nodeagent/nodeagent.pid"
+  tags:
+    - deletePid
+-
+  name: cleanup dirs
+  file:
+    state: absent
+    path: "{{ was_root }}"
+  tags:
+    - cleanup
+    
