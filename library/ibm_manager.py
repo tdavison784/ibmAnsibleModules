@@ -49,13 +49,13 @@ author:
 
 
 EXAMPLES = '''
-- name: Stop Deployment Manager
-  ibm_node:
+- name: Start Deployment Manager
+  ibm_manager:
     state: start
     path: /opt/WebSphere/AppServer
     profile: Dmgr01
-- name: Stop Node Agent
-  ibm_node:
+- name: Stop DMGR
+  ibm_manager:
     state: stop
     path: /opt/WebSphere/AppServer
     profile: DmgrProfile
@@ -79,7 +79,7 @@ def deployment_manager(module):
     service are not done in this module, but rather done in main function.
     """
 
-    manager = "{0}/profiles/{1}/bin/{2}/Manager.sh".format(module.params['path'],
+    manager = "{0}/profiles/{1}/bin/{2}Manager.sh".format(module.params['path'],
                                                            module.params['profile'],
                                                            module.params['state'])
     run_manager =  module.run_command(manager)
