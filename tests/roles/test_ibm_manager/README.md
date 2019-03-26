@@ -7,6 +7,8 @@ Requirements
 ------------
 
 Requirments are shipped with role. The /library directory contains the needed modules to run ansible unit test on.
+Tasks are tagged and its recommended to use. To start run with  --skip-tags "cleanup" then after first run use tag "Dmgr" to
+test ibm_manager functionaility.
 
 Role Variables
 --------------
@@ -15,6 +17,10 @@ The following are the variables that can be set for this role:
 was_root
 profile_name
 state
+user
+group
+
+These variables are best used at the command line to test various states
 
 
 Dependencies
