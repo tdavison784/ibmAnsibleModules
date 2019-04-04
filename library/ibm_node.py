@@ -65,54 +65,62 @@ message:
 
 '''
 
-def stop_node(module,state,path,profile):
+def stop_node(module):
     """Function that will stop IBM Node agent.
     Function is idempotent and will only stop if running.
     To determine running state, we will check for the default .pid
     location to determine state. Below are the return results:
     """
+    try:
+        if module.params['state'] == 'stop':
+            stop_node_cmd = "{0}/profiles/{1}/bin/stopNode.sh".format(module.params['path'],module.params['profile'])
+            stop_node = module.run_commmand(stop_node_cmd)
 
-    if state == 'stop' and os.path.exists(path+'/profiles/'+profile+'/logs/nodeagent/nodeagent.pid'):
-        stop_node =  module.run_command(path+'/profiles/'+profile+'/bin/stopNode.sh', use_unsafe_shell=True)
-
-        if stop_node[0] != 0:
-            module.fail_json(
-                msg='Failed to send node agent into a %s state for profile %s' %(state, profile),
-                changed=False,
-                stderr=stop_node[2]
+            if stop_node[0] != 0:
+                module.fail_json(
+                    msg="Failed to stop node agent. See stderr for details",
+                    changed=False,
+                    stderr=stop_node[2]
+                )
+            module.exit_json(
+                msg="Successfully stopped node agent",
+                changed=True
             )
-        module.exit_json(
-            msg='Succesfully sent node agent into a %s state for profile %s' %(state, profile),
-            changed=True
-        )
-    else:
-        module.exit_json(
-            msg='Node Agent is not running.',
-            changed=False
-        )
 
-def start_node(module,state,path,profile):
+    except OSError:
+            module.exit_json(
+                msg="Path does not exist.",
+                changed=False
+                params=module.params['path']
+            )
+
+def start_node(module):
     """Function that will start Node Agent if stopped.
     Function is idempotent and will only start if stopped.
     To determine running state we will check for the default .pid
     location to determine state.
     """
 
-    if not os.path.exists(path+'/profiles/'+profile+'/logs/nodeagent/nodeagent.pid'):
-        start_node = module.run_command(path+'/profiles/'+profile+'/bin/startNode.sh', use_unsafe_shell=True)
-        if start_node[0] != 0:
-            module.fail_json(
-                msg='Failed to send node agent into %s for profile %s' % (state, profile),
-                changed=False,
-                stderr=start_node[2]
+    try:
+        if module.params['state'] == 'start':
+            start_node_cmd = "{0}/profiles/{1}/bin/startNode.sh".format(module.params['path'],module.params['profile'])
+            start_node = module.run_command(start_node_cmd)
+
+            if start_node[0] != 0:
+                module.fail_json(
+                    msg="Failed to start node agent. See stderr for details",
+                    changed=False,
+                    stderr=start_node[2]
+                )
+            module.exit_json(
+                msg="Sucesffuly started node agent."
+                changed=True
             )
+    except OSError:
         module.exit_json(
-            msg='Succesfully sent node agent into % state for profile %s' % (state, profile),
-            changed=True
-        )
-    else:
-        module.exit_json(
-            msg='>>>>>>>> Node agent is already running <<<<<<<<'
+            msg="Path does not exist",
+            changed=False,
+            params=module.params['path']
         )
 
 def main():
@@ -133,33 +141,33 @@ def main():
     profile = module.params['profile']
 
     if state == 'stop' and not module.check_mode:
-        stop_node(module,state,path,profile)
+        stop_node(module)
 
     if state == 'start' and not module.check_mode:
-        start_node(module,state,path,profile)
+        start_node(module)
 
     if module.check_mode:
         if state == 'stop':
             if os.path.exists("%s/profiles/%s/logs/nodeagent/nodeagent.pid"):
                 module.exit_json(
-                    msg="Sending Nodeagent into %s state" % (state),
+                    msg="Sending Nodeagent into {0} state".format(state),
                     changed=True
                 )
             else:
                 module.exit_json(
-                    msg="NodeAgent is already in %s state" % (state),
+                    msg="NodeAgent is already in {0} state".format(state),
                     changed=False
                 )
 
         if state == 'start':
             if not os.path.exists("%s/profiles/%s/logs/nodeagent/nodeagent.pid"):
                 module.exit_json(
-                    msg="Sending node agent into %s state." % (state),
+                    msg="Sending node agent into {0} state.".format(state),
                     changed=True
                 )
             else:
                 module.exit_json(
-                    msg="NodeAgent is already in %s state." % (state),
+                    msg="NodeAgent is already in %s state.".format(state),
                     changed=False
                 )
 
